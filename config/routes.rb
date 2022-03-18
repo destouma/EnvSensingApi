@@ -37,6 +37,14 @@ Rails.application.routes.draw do
         end
       end
 
+      resources :pictures do
+        collection do
+          get :index
+          post :create
+          post :upload
+          get :file
+        end
+      end
 
     end
   end
