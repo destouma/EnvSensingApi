@@ -208,6 +208,88 @@
 			"response": []
 		},
 		{
+			"name": "create picture in db",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status test\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"sensor_uuid\": \"123-123-000-005\",\n    \"file_name\": \"flower.jpg\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:3000/api/v1/pictures.json",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"v1",
+						"pictures.json"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "upload picture file",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "/Users/destouma/Pictures/flower.jpg"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:3000/api/v1/pictures/upload.json",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"v1",
+						"pictures",
+						"upload.json"
+					]
+				}
+			},
+			"response": []
+		},
+		{
 			"name": "get all sensors",
 			"event": [
 				{
@@ -331,7 +413,7 @@
 					}
 				},
 				"url": {
-					"raw": "http://localhost:3000/api/v1/sensors.json?device_uuid=123-123-000-000",
+					"raw": "http://localhost:3000/api/v1/sensors.json?device_uuid=123-123-000-001",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -345,7 +427,7 @@
 					"query": [
 						{
 							"key": "device_uuid",
-							"value": "123-123-000-000"
+							"value": "123-123-000-001"
 						}
 					]
 				}
@@ -536,6 +618,164 @@
 						{
 							"key": "sensor_uuid",
 							"value": "123-123-000-001"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get all pictures",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status test\", function () {",
+							"    pm.response.to.have.status(400);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:3000/api/v1/pictures.json",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"v1",
+						"pictures.json"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get all pictures for one UUID",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status test\", function () {",
+							"    pm.response.to.have.status(400);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:3000/api/v1/pictures.json?sensor_uuid=123-123-000-005",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"v1",
+						"pictures.json"
+					],
+					"query": [
+						{
+							"key": "sensor_uuid",
+							"value": "123-123-000-005"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get picture file",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status test\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"sensor_uuid\": \"123-123-000-005\",\n    \"file_name\": \"flower.jpg\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:3000/api/v1/pictures/file.json?id=3",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"v1",
+						"pictures",
+						"file.json"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "3"
 						}
 					]
 				}
