@@ -1,4 +1,24 @@
 openapi: 3.0.1
+security:
+  - regularSecurity: []
+    OAuth2:
+      - readOnly
+servers:
+  - url: 'http://192.168.1.238'
+    description: integration
+components:
+  securitySchemes:
+    regularSecurity:
+      type: http
+      scheme: basic
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          scopes:
+            readOnly: read objects in your account
+          authorizationUrl: https://example.com/oauth/authorize
+          tokenUrl: https://example.com/oauth/token      
 info:
   title: Environmental Sensing API
   version: v1
@@ -39,12 +59,19 @@ paths:
                           type: integer
                         uuid:
                           type: string
+                          maxLength: 10
+                          pattern: ^[A-Za-z0-9]{3,10}$
                         name:
                           type: string
+                          maxLength: 256
+                          pattern: ^[A-Za-z0-9 ]*$
                         description:
                           type: string
+                          maxLength: 256
+                          pattern: ^[A-Za-z0-9 ]*$
                         sensors:
                           type: array
+                          maxItems: 100
                           items:
                             type: object
                             properties:
@@ -52,10 +79,16 @@ paths:
                                 type: integer
                               uuid:
                                 type: string
+                                maxLength: 10
+                                pattern: ^[A-Za-z0-9 ]*$
                               name:
                                 type: string
+                                maxLength: 256
+                                pattern: ^[A-Za-z0-9 ]*$
                               description:
                                 type: string
+                                maxLength: 256
+                                pattern: ^[A-Za-z0-9 ]*$             
                               sensor_type:
                                 type: object
                                 properties:
@@ -63,10 +96,15 @@ paths:
                                     type: integer
                                   name:
                                     type: string
+                                    maxLength: 256
+                                    pattern: ^[A-Za-z0-9 ]*$
                                   unit:
                                     type: string
+                                    maxLength: 256
+                                    pattern: ^[A-Za-z0-9 ]*$
                                   pow10multi:
                                     type: integer
+                          
               examples:
                 example-1:
                   value:
@@ -132,14 +170,24 @@ paths:
                     type: integer
                   uuid:
                     type: string
+                    pattern: ^[A-Za-z0-9 ]*$
+                    maxLength: 10
                   name:
                     type: string
+                    pattern: ^[A-Za-z0-9 ]*$
+                    maxLength: 256
                   description:
                     type: string
+                    pattern: ^[A-Za-z0-9 ]*$
+                    maxLength: 256
                   created_at:
                     type: string
+                    maxLength: 25
+                    pattern: ˆ[1-9][0-9]{3}\-[0-1]?[1-9]\-[0-3]?[0-9]+T.+[\.][0-9]+(Z|[\+\-].+)
                   updated_at:
                     type: string
+                    maxLength: 25
+                    pattern: ˆ[1-9][0-9]{3}\-[0-1]?[1-9]\-[0-3]?[0-9]+T.+[\.][0-9]+(Z|[\+\-].+)
               examples:
                 example-1:
                   value:
@@ -170,10 +218,16 @@ paths:
               properties:
                 uuid:
                   type: string
+                  maxLength: 10
+                  pattern: ^[A-Za-z0-9]{3,10}$
                 name:
                   type: string
+                  maxLength: 256
+                  pattern: ^[A-Za-z0-9 ]*$            
                 description:
                   type: string
+                  maxLength: 256
+                  pattern: ^[A-Za-z0-9 ]*$     
               required:
                 - uuid
                 - name
@@ -199,8 +253,9 @@ paths:
               schema:
                 type: object
                 properties:
-                  sensor_typr:
+                  sensor_type:
                     type: array
+                    maxItems: 100
                     items:
                       type: object
                       properties:
@@ -208,8 +263,12 @@ paths:
                           type: integer
                         name:
                           type: string
+                          maxLength: 256
+                          pattern: ^[A-Za-z0-9 ]*$             
                         unit:
                           type: string
+                          maxLength: 256
+                          pattern: ^[A-Za-z0-9 ]*$
                         pow10multi:
                           type: integer
               examples:
@@ -245,6 +304,7 @@ paths:
                 properties:
                   sensors:
                     type: array
+                    maxItems: 100
                     items:
                       type: object
                       properties:
@@ -252,10 +312,16 @@ paths:
                           type: integer
                         uuid:
                           type: string
+                          maxLength: 10
+                          pattern: ^[A-Za-z0-9]{3,10}$
                         name:
                           type: string
+                          maxLength: 256
+                          pattern: ^[A-Za-z0-9 ]*$
                         description:
                           type: string
+                          maxLength: 256
+                          pattern: ^[A-Za-z0-9 ]*$        
                         sensor_type:
                           type: object
                           properties:
@@ -263,8 +329,12 @@ paths:
                               type: integer
                             name:
                               type: string
+                              maxLength: 256
+                              pattern: ^[A-Za-z0-9 ]*$       
                             unit:
                               type: string
+                              maxLength: 256
+                              pattern: ^[A-Za-z0-9 ]*$     
                             pow10multi:
                               type: integer
               examples:
@@ -303,6 +373,8 @@ paths:
       parameters:
         - schema:
             type: string
+            maxLength: 256
+            pattern: ^[A-Za-z0-9 ]*$
           in: query
           name: device_uuid
           required: true
@@ -323,10 +395,16 @@ paths:
                     type: integer
                   uuid:
                     type: string
+                    maxLength: 10
+                    pattern: ^[A-Za-z0-9]{3,10}$
                   name:
                     type: string
+                    maxLength: 256
+                    pattern: ^[A-Za-z0-9 ]*$     
                   description:
                     type: string
+                    maxLength: 256
+                    pattern: ^[A-Za-z0-9 ]*$     
                   created_at:
                     type: string
                   updated_at:
@@ -355,6 +433,8 @@ paths:
                 properties:
                   message:
                     type: string
+                    maxLength: 256
+                    pattern: ^[A-Za-z0-9 ]*$
               examples:
                 example-1:
                   value:
@@ -371,10 +451,16 @@ paths:
                   type: integer
                 uuid:
                   type: string
+                  maxLength: 10
+                  pattern: ^[A-Za-z0-9]{3,10}$
                 name:
                   type: string
+                  maxLength: 256
+                  pattern: ^[A-Za-z0-9 ]*$     
                 description:
                   type: string
+                  maxLength: 256
+                  pattern: ^[A-Za-z0-9 ]*$     
               required:
                 - device_id
                 - sensor_type_id
@@ -407,6 +493,7 @@ paths:
                 properties:
                   sensor_readings:
                     type: array
+                    maxItems: 100
                     items:
                       type: object
                       properties:
@@ -417,8 +504,12 @@ paths:
                               type: integer
                             uuid:
                               type: string
+                              maxLength: 10
+                              pattern: ^[A-Za-z0-9]{3,10}$
                             name:
                               type: string
+                              maxLength: 256
+                              pattern: ^[A-Za-z0-9 ]*$     
                             sensor_type:
                               type: object
                               properties:
@@ -426,8 +517,12 @@ paths:
                                   type: integer
                                 name:
                                   type: string
+                                  maxLength: 256
+                                  pattern: ^[A-Za-z0-9 ]*$     
                                 unit:
                                   type: string
+                                  maxLength: 256
+                                  pattern: ^[A-Za-z0-9 ]*$
                                 pow10multi:
                                   type: integer
                         sensor_value:
@@ -535,6 +630,8 @@ paths:
                 properties:
                   message:
                     type: string
+                    maxLength: 256
+                    pattern: ^[A-Za-z0-9 ]*$
               examples:
                 example-1:
                   value:
@@ -542,6 +639,8 @@ paths:
       parameters:
         - schema:
             type: string
+            maxLength: 256
+            pattern: ^[A-Za-z0-9 ]*$
           in: query
           name: sensor_uuid
           required: true
@@ -559,10 +658,14 @@ paths:
               properties:
                 sensor_uuid:
                   type: string
+                  maxLength: 10
+                  pattern: ^[A-Za-z0-9]{3,10}$                  
                 sensor_value:
                   type: integer
                 sensor_date_time:
                   type: string
+                  maxLength: 25
+                  pattern: ˆ[1-9][0-9]{3}\-[0-1]?[1-9]\-[0-3]?[0-9]+T.+[\.][0-9]+(Z|[\+\-].+)
               required:
                 - sensor_uuid
                 - sensor_value
@@ -632,21 +735,12 @@ paths:
                 properties:
                   current_date_time:
                     type: string
-                    minLength: 1
+                    maxLength: 50
+                    pattern: ˆ[1-9][0-9]{3}\-[0-1]?[1-9]\-[0-3]?[0-9]+T.+[\.][0-9]+(Z|[\+\-].+)
               examples:
                 example-1:
                   value:
                     current_date_time: '2020-11-03T11:05:30.001Z'
       operationId: get-api-v1-date_time-current_date_time.json
       description: Get current date time
-servers:
-  - url: 'http://localhost:3000'
-    variables:
-      defaultHost:
-        default: 'localhost:3000'
-    description: dev
-  - url: 'http://192.168.1.238'
-    description: integration
-components:
-  securitySchemes: {}
-  schemas: {}
+

@@ -11,8 +11,8 @@ ENV RACK_ENV='production'
 # Adding gems
 COPY Gemfile Gemfile
 COPY Gemfile.lock Gemfile.lock
-ENV BUNDLER_VERSION 2.1.14
-RUN gem install bundler
+ENV BUNDLER_VERSION 2.3.27
+RUN gem install bundler  -v 2.3.27
 RUN bundle install
 # Adding project files
 COPY . .
