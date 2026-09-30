@@ -24,7 +24,7 @@ module KeysetPagination
 
     records = scope.reorder(date_time: :desc, id: :desc).limit(limit + 1).to_a
     next_cursor = encode_cursor(records[limit - 1]) if records.size > limit
-    [records.first(limit), next_cursor]
+    [ records.first(limit), next_cursor ]
   end
 
   def page_limit
@@ -48,7 +48,7 @@ module KeysetPagination
 
   def decode_cursor(cursor)
     date_time, id = Base64.urlsafe_decode64(cursor).split("|", 2)
-    [Time.iso8601(date_time), Integer(id)]
+    [ Time.iso8601(date_time), Integer(id) ]
   rescue ArgumentError, TypeError
     raise Api::V1::BaseController::BadRequest, "cursor is invalid"
   end

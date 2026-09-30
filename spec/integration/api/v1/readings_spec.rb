@@ -46,7 +46,7 @@ RSpec.describe 'Readings', type: :request do
                },
                required: %w[sensor readings next_cursor], additionalProperties: false
         run_test! do
-          expect(response.parsed_body['readings'].pluck('value')).to eq([2102, 2101])
+          expect(response.parsed_body['readings'].pluck('value')).to eq([ 2102, 2101 ])
           expect(response.parsed_body['next_cursor']).to be_present
         end
       end
@@ -69,7 +69,7 @@ RSpec.describe 'Readings', type: :request do
     post 'Add a reading' do
       tags 'Readings'
       description 'Device token, for a sensor of that device only. Prefer POST /api/v1/readings to send several readings at once.'
-      security [deviceToken: []]
+      security [ deviceToken: [] ]
       consumes 'application/json'
       produces 'application/json'
       parameter name: :body, in: :body, schema: reading_input
@@ -105,7 +105,7 @@ RSpec.describe 'Readings', type: :request do
       tags 'Readings'
       description 'Device token. One request per measurement cycle (up to 100 readings), for sensors of that device. ' \
                   'All or nothing: if one reading is invalid, none is stored.'
-      security [deviceToken: []]
+      security [ deviceToken: [] ]
       consumes 'application/json'
       produces 'application/json'
       parameter name: :body, in: :body, schema: {
@@ -126,8 +126,8 @@ RSpec.describe 'Readings', type: :request do
       response '201', 'readings created' do
         let(:Authorization) { bearer(device_token) }
         let(:body) do
-          { readings: [{ sensor_uuid: sensor.uuid, value: 2150, date_time: '2026-09-30T12:00:00Z' },
-                       { sensor_uuid: humidity.uuid, value: 4520, date_time: '2026-09-30T12:00:00Z' }] }
+          { readings: [ { sensor_uuid: sensor.uuid, value: 2150, date_time: '2026-09-30T12:00:00Z' },
+                       { sensor_uuid: humidity.uuid, value: 4520, date_time: '2026-09-30T12:00:00Z' } ] }
         end
         schema type: :object,
                properties: { readings: { type: :array, items: { '$ref' => '#/components/schemas/reading' } } },
@@ -139,7 +139,7 @@ RSpec.describe 'Readings', type: :request do
 
       response '422', 'at least one invalid reading, nothing stored' do
         let(:Authorization) { bearer(device_token) }
-        let(:body) { { readings: [{ sensor_uuid: sensor.uuid, value: 2150 }, { sensor_uuid: humidity.uuid, value: 'high' }] } }
+        let(:body) { { readings: [ { sensor_uuid: sensor.uuid, value: 2150 }, { sensor_uuid: humidity.uuid, value: 'high' } ] } }
         schema '$ref' => '#/components/schemas/error'
         run_test! do
           expect(response.parsed_body.dig('error', 'details')).to have_key('readings[1].value')

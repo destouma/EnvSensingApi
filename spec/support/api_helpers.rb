@@ -16,7 +16,7 @@ module UploadHelpers
   JPEG_BYTES = "\xFF\xD8\xFF\xE0\x00\x10JFIF\x00example-jpeg-body".b.freeze
 
   def jpeg_upload(name = 'picture.jpg')
-    file = Tempfile.new(['upload', File.extname(name)])
+    file = Tempfile.new([ 'upload', File.extname(name) ])
     file.binmode
     file.write(JPEG_BYTES)
     file.rewind

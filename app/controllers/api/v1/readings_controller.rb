@@ -4,7 +4,7 @@ class Api::V1::ReadingsController < Api::V1::BaseController
   MAX_BATCH_SIZE = 100
 
   before_action :require_read_scope!, only: :index
-  before_action :require_device!, only: [:create, :batch]
+  before_action :require_device!, only: [ :create, :batch ]
 
   # GET /api/v1/sensors/:sensor_uuid/readings
   def index
@@ -24,7 +24,7 @@ class Api::V1::ReadingsController < Api::V1::BaseController
   # One request per measurement cycle (TLS handshakes are expensive on microcontrollers).
   # All or nothing: if any reading is invalid, none is stored.
   def batch
-    items = params.expect(readings: [[:sensor_uuid, :value, :date_time]])
+    items = params.expect(readings: [ [ :sensor_uuid, :value, :date_time ] ])
     raise BadRequest, "readings must contain 1 to #{MAX_BATCH_SIZE} items" unless items.size.between?(1, MAX_BATCH_SIZE)
 
     sensors = current_device.sensors.where(uuid: items.map { |item| item[:sensor_uuid] }).index_by(&:uuid)
@@ -45,7 +45,7 @@ class Api::V1::ReadingsController < Api::V1::BaseController
     errors = {}
     @readings.each_with_index do |reading, index|
       if sensors[items[index][:sensor_uuid]].nil?
-        errors["readings[#{index}].sensor_uuid"] = ["sensor not found"]
+        errors["readings[#{index}].sensor_uuid"] = [ "sensor not found" ]
       elsif reading.invalid?
         reading.errors.each { |error| (errors["readings[#{index}].#{error.attribute}"] ||= []) << error.message }
       end

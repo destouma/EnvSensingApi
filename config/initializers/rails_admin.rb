@@ -47,7 +47,7 @@ RailsAdmin.config do |config|
   ## == Tokens ==
   # Tokens are issued with the auth:* rake tasks (the plaintext is shown once there).
   # The admin can only list them and revoke them by setting revoked_at.
-  %w(DeviceToken ApiKey).each do |model|
+  %w[DeviceToken ApiKey].each do |model|
     config.model model do
       list { exclude_fields :token_digest }
       show { exclude_fields :token_digest }
@@ -62,7 +62,7 @@ RailsAdmin.config do |config|
     dashboard                     # mandatory
     index                         # mandatory
     new do
-      except %w(DeviceToken ApiKey)
+      except %w[DeviceToken ApiKey]
     end
     export
     bulk_delete

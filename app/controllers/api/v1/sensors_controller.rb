@@ -1,5 +1,5 @@
 class Api::V1::SensorsController < Api::V1::BaseController
-  before_action :require_read_scope!, only: [:index, :show]
+  before_action :require_read_scope!, only: [ :index, :show ]
   before_action :require_admin_scope!, only: :create
 
   # GET /api/v1/devices/:device_uuid/sensors

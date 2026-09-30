@@ -19,7 +19,7 @@ class ApiKey < ApplicationRecord
   include TokenAuthenticatable
   token_prefix "esk_"
 
-  SCOPES = %w(read admin).freeze
+  SCOPES = %w[read admin].freeze
 
   validates :name, presence: true
   validates :scope, inclusion: { in: SCOPES }

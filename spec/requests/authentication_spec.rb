@@ -19,19 +19,19 @@ RSpec.describe 'API authentication', type: :request do
 
   # endpoint => which caller is allowed (:read also allows admin keys)
   endpoints = [
-    [:get,  '/api/v1/devices', :read],
-    [:get,  '/api/v1/devices/dev-1', :read],
-    [:post, '/api/v1/devices', :admin],
-    [:get,  '/api/v1/devices/dev-1/sensors', :read],
-    [:post, '/api/v1/devices/dev-1/sensors', :admin],
-    [:get,  '/api/v1/sensors/sensor-1', :read],
-    [:get,  '/api/v1/sensor_types', :read],
-    [:get,  '/api/v1/sensors/sensor-1/readings', :read],
-    [:post, '/api/v1/sensors/sensor-1/readings', :device],
-    [:post, '/api/v1/readings', :device],
-    [:get,  '/api/v1/sensors/sensor-1/pictures', :read],
-    [:post, '/api/v1/sensors/sensor-1/pictures', :device],
-    [:get,  '/api/v1/pictures/1/file', :read]
+    [ :get,  '/api/v1/devices', :read ],
+    [ :get,  '/api/v1/devices/dev-1', :read ],
+    [ :post, '/api/v1/devices', :admin ],
+    [ :get,  '/api/v1/devices/dev-1/sensors', :read ],
+    [ :post, '/api/v1/devices/dev-1/sensors', :admin ],
+    [ :get,  '/api/v1/sensors/sensor-1', :read ],
+    [ :get,  '/api/v1/sensor_types', :read ],
+    [ :get,  '/api/v1/sensors/sensor-1/readings', :read ],
+    [ :post, '/api/v1/sensors/sensor-1/readings', :device ],
+    [ :post, '/api/v1/readings', :device ],
+    [ :get,  '/api/v1/sensors/sensor-1/pictures', :read ],
+    [ :post, '/api/v1/sensors/sensor-1/pictures', :device ],
+    [ :get,  '/api/v1/pictures/1/file', :read ]
   ]
 
   endpoints.each do |verb, path, allowed|
@@ -127,11 +127,11 @@ RSpec.describe 'API authentication', type: :request do
 
     it "rejects a whole batch that contains another device's sensor" do
       post '/api/v1/readings',
-           params: { readings: [{ sensor_uuid: 'sensor-1', value: 1 }, { sensor_uuid: 'sensor-2', value: 2 }] },
+           params: { readings: [ { sensor_uuid: 'sensor-1', value: 1 }, { sensor_uuid: 'sensor-2', value: 2 } ] },
            headers: bearer(device_token.token), as: :json
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.parsed_body.dig('error', 'details')).to eq('readings[1].sensor_uuid' => ['sensor not found'])
+      expect(response.parsed_body.dig('error', 'details')).to eq('readings[1].sensor_uuid' => [ 'sensor not found' ])
       expect(SensorReading.count).to eq(0)
     end
   end

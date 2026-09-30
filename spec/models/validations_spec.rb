@@ -8,7 +8,7 @@ RSpec.describe 'Model validations' do
     it 'requires a unique uuid made of URL-safe characters, and a name' do
       expect(Device.new(uuid: 'dev-2', name: 'x')).to be_valid
       expect(Device.new(uuid: device.uuid, name: 'x')).not_to be_valid
-      ['', 'with space', 'with/slash', 'with.dot', '-leading', 'x' * 65].each do |uuid|
+      [ '', 'with space', 'with/slash', 'with.dot', '-leading', 'x' * 65 ].each do |uuid|
         expect(Device.new(uuid: uuid, name: 'x')).not_to be_valid, "expected #{uuid.inspect} to be invalid"
       end
       expect(Device.new(uuid: 'dev-3', name: '')).not_to be_valid

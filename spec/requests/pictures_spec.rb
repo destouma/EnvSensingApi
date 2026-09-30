@@ -21,7 +21,7 @@ RSpec.describe 'Pictures API', type: :request do
   end
 
   def uploaded(name, content)
-    file = Tempfile.new(['upload', File.extname(name)])
+    file = Tempfile.new([ 'upload', File.extname(name) ])
     file.binmode
     file.write(content)
     file.rewind
@@ -53,7 +53,7 @@ RSpec.describe 'Pictures API', type: :request do
       upload('../../../../etc/passwd.jpg', jpeg_bytes)
 
       expect(response).to have_http_status(:created)
-      expect(stored_files.map(&:dirname)).to eq([device_dir])
+      expect(stored_files.map(&:dirname)).to eq([ device_dir ])
     end
 
     it 'never overwrites an existing picture, even with the same client file name' do

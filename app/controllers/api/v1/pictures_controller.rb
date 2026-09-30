@@ -1,7 +1,7 @@
 class Api::V1::PicturesController < Api::V1::BaseController
   include KeysetPagination
 
-  before_action :require_read_scope!, only: [:index, :file]
+  before_action :require_read_scope!, only: [ :index, :file ]
   before_action :require_device!, only: :create
 
   # GET /api/v1/sensors/:sensor_uuid/pictures

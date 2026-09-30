@@ -13,7 +13,7 @@ sensor_types = {
   "Humidity Level" => { unit: "%", pow10multi: -2 },
   "Camera" => { unit: "jpg", pow10multi: 0 }
 }.to_h do |name, attributes|
-  [name, SensorType.find_or_create_by!(name: name) { |type| type.assign_attributes(attributes) }]
+  [ name, SensorType.find_or_create_by!(name: name) { |type| type.assign_attributes(attributes) } ]
 end
 
 return if Rails.env.production? && ENV["SEED_DEMO_DEVICES"].blank?
@@ -22,15 +22,15 @@ devices = {
   "123-123-000-000" => {
     name: "MKR1010 BME280",
     sensors: {
-      "123-123-000-001" => ["Temperature Sensor", "Temperature"],
-      "123-123-000-002" => ["Pressure Sensor", "Pressure"],
-      "123-123-000-003" => ["Humidity Level Sensor", "Humidity Level"],
-      "123-123-000-004" => ["Battery Level Sensor", "Battery Level"]
+      "123-123-000-001" => [ "Temperature Sensor", "Temperature" ],
+      "123-123-000-002" => [ "Pressure Sensor", "Pressure" ],
+      "123-123-000-003" => [ "Humidity Level Sensor", "Humidity Level" ],
+      "123-123-000-004" => [ "Battery Level Sensor", "Battery Level" ]
     }
   },
   "123-123-000-001" => {
     name: "ESP32 CAM",
-    sensors: { "123-123-000-005" => ["Camera", "Camera"] }
+    sensors: { "123-123-000-005" => [ "Camera", "Camera" ] }
   }
 }
 

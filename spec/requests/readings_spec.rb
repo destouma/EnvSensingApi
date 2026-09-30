@@ -12,7 +12,7 @@ RSpec.describe 'Readings API', type: :request do
 
     before do
       # Two readings share a timestamp to exercise the (date_time, id) tie-break.
-      [0, 1, 2, 2, 3].each_with_index do |minute, i|
+      [ 0, 1, 2, 2, 3 ].each_with_index do |minute, i|
         sensor.sensor_readings.create!(value: i, date_time: start + minute.minutes)
       end
       other = Sensor.create!(uuid: 'sensor-2', name: 'Other', device: device, sensor_type: sensor_type)
@@ -36,17 +36,17 @@ RSpec.describe 'Readings API', type: :request do
         break if cursor.nil?
       end
 
-      expect(values).to eq([4, 3, 2, 1, 0])
+      expect(values).to eq([ 4, 3, 2, 1, 0 ])
       expect(pages).to eq(3)
     end
 
     it 'filters by from (inclusive) and to (exclusive)' do
       body = fetch(from: (start + 1.minute).iso8601, to: (start + 3.minutes).iso8601)
-      expect(body['readings'].pluck('value')).to eq([3, 2, 1])
+      expect(body['readings'].pluck('value')).to eq([ 3, 2, 1 ])
     end
 
     it 'returns 400 for an invalid limit, date or cursor' do
-      [{ limit: 0 }, { limit: 1001 }, { limit: 'ten' }, { from: 'yesterday' }, { cursor: 'garbage' }].each do |params|
+      [ { limit: 0 }, { limit: 1001 }, { limit: 'ten' }, { from: 'yesterday' }, { cursor: 'garbage' } ].each do |params|
         fetch(**params)
         expect(response).to have_http_status(:bad_request), "expected 400 for #{params}"
         expect(response.parsed_body.dig('error', 'code')).to eq('bad_request')
@@ -75,12 +75,12 @@ RSpec.describe 'Readings API', type: :request do
 
     it 'rejects decimals, out of range values and implausible dates' do
       [
-        [{ value: 21.5 }, 'value'],
-        [{ value: 2**63 }, 'value'],
-        [{}, 'value'],
-        [{ value: 1, date_time: 'not a date' }, 'date_time'],
-        [{ value: 1, date_time: '1970-01-01T00:00:00Z' }, 'date_time'],
-        [{ value: 1, date_time: 1.hour.from_now.iso8601 }, 'date_time']
+        [ { value: 21.5 }, 'value' ],
+        [ { value: 2**63 }, 'value' ],
+        [ {}, 'value' ],
+        [ { value: 1, date_time: 'not a date' }, 'date_time' ],
+        [ { value: 1, date_time: '1970-01-01T00:00:00Z' }, 'date_time' ],
+        [ { value: 1, date_time: 1.hour.from_now.iso8601 }, 'date_time' ]
       ].each do |body, field|
         post_reading(body)
         expect(response).to have_http_status(:unprocessable_content), "expected 422 for #{body}"

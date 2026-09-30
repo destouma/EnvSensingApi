@@ -45,7 +45,7 @@ RSpec.describe 'Pictures', type: :request do
       tags 'Pictures'
       description 'Device token, for a sensor of that device only. JPEG or PNG, up to 5 MB. ' \
                   'The file is stored under a server generated name.'
-      security [deviceToken: []]
+      security [ deviceToken: [] ]
       consumes 'multipart/form-data'
       produces 'application/json'
       # rswag documents only the first form parameter that has a schema, so it carries the whole
