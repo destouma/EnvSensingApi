@@ -34,3 +34,12 @@
 # TLS: private CA and server certificate (bin/generate-lan-cert), never commit keys
 /docker/web/ca/
 /docker/web/certs/
+
+# Editor / IDE files (RubyMine) and local load-test logs
+/.idea/
+/.generators
+/.rakeTasks
+/jmeter.log
+
+# RSpec example status (--only-failures / --next-failure)
+/spec/examples.txt
