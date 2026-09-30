@@ -1,5 +1,25 @@
 RailsAdmin.config do |config|
 
+  ## == HTTP Basic auth ==
+  # Credentials come from ADMIN_USERNAME / ADMIN_PASSWORD. If they are not set, access is
+  # denied in production and left open in development/test.
+  config.authenticate_with do
+    username = ENV["ADMIN_USERNAME"].presence
+    password = ENV["ADMIN_PASSWORD"].presence
+
+    if username && password
+      authenticate_or_request_with_http_basic("Admin") do |given_username, given_password|
+        # Compare both values without short-circuiting to avoid a timing side channel.
+        [
+          ActiveSupport::SecurityUtils.secure_compare(given_username, username),
+          ActiveSupport::SecurityUtils.secure_compare(given_password, password)
+        ].all?
+      end
+    elsif Rails.env.production?
+      head :forbidden
+    end
+  end
+
   ### Popular gems integration
 
   ## == Devise ==

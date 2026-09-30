@@ -10,7 +10,8 @@ services:
       dockerfile: ./docker/app/Dockerfile
     environment:
       RAILS_ENV: production
-      SECRET_KEY_BASE: 995ce397d5fc7de819176d3c7356c1ef463e0ba4ab8ebb73a26d8fde64f8d7bd76509d33aa49b2221be444261514b5e401ce084ec2940195ec6702c02819e44c
+    # SECRET_KEY_BASE, ADMIN_USERNAME, ADMIN_PASSWORD (see .env.example)
+    env_file: .env
     depends_on:
       - db
   db:

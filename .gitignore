@@ -27,3 +27,6 @@
 .devspace/
 
 /storage
+
+# Local environment / secrets
+.env

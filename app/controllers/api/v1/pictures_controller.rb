@@ -17,17 +17,15 @@ class Api::V1::PicturesController < ApplicationController
     if params[:sensor_uuid]
       sensor = Sensor.where(uuid: params[:sensor_uuid]).first
       if sensor
-        @picture = Picture.new();
-        tmp = params[:file_name]
-        @picture.sensor_id= sensor.id
+        @picture = Picture.new
+        @picture.sensor_id = sensor.id
         @picture.file_name = params[:file_name]
-        @picture.file_url = "#{Rails.root}/storage/pictures/#{tmp}"
-        if params[:sensor_date_time]
-            @picture.date_time=params[:picture_date_time]
-        else
-          @picture.date_time=DateTime.now
+        # sensor_date_time is still accepted for clients built against the old (buggy) parameter name
+        date_time = params[:picture_date_time] || params[:sensor_date_time]
+        @picture.date_time = date_time || DateTime.now
+        unless @picture.save
+          render json: { message: "Error: #{@picture.errors.full_messages.to_sentence}" }, status: :unprocessable_entity
         end
-        @picture.save!
       else
         render json: { message: "Error: sensor not found" }, status: :bad_request
       end
@@ -37,14 +35,20 @@ class Api::V1::PicturesController < ApplicationController
   end
 
   def upload
-    @file = params[:file]
-    uploader = PictureUploader.new
-    uploader.store!(@file)
+    uploader = Api::V1::PictureUploader.new
+    uploader.store!(params.require(:file))
+  rescue CarrierWave::IntegrityError => e
+    render json: { message: "Error: #{e.message}" }, status: :unprocessable_entity
   end
 
   def file
-    picture= Picture.find(params[:id])
-    send_file picture.file_url
+    picture = Picture.find(params[:id])
+    path = picture.file_path
+    if path
+      send_file path, disposition: :inline
+    else
+      render json: { message: "Error: file not found" }, status: :not_found
+    end
   end
 
 end

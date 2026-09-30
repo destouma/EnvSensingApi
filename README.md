@@ -43,7 +43,13 @@ Production:
 * db  : postgres
 * web : nginx
 
-In the folder:
+In the folder, create the `.env` file first (it is git-ignored, never commit it):
+```shell script
+$ cp .env.example .env
+$ openssl rand -hex 64   # paste as SECRET_KEY_BASE, then set ADMIN_USERNAME / ADMIN_PASSWORD
+```
+`/admin` is protected by HTTP Basic auth and returns 403 in production when the admin credentials are not set.
+
 ```shell script
 $ sudo docker-compose up -d
 $ sudo docker-compose exec app bash

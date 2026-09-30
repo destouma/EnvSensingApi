@@ -1,5 +1,5 @@
 json.pictures @pictures do |picture|
-  picture.sensor do
+  json.sensor do
     json.id picture.sensor.id
     json.uuid picture.sensor.uuid
     json.name picture.sensor.name
@@ -10,6 +10,6 @@ json.pictures @pictures do |picture|
   end
   json.picture_id picture.id
   json.picture_file_name picture.file_name
-  json.picture_file_url picture.file_url
+  json.picture_file_url file_api_v1_pictures_path(id: picture.id, format: :json)
   json.picture_date_time picture.date_time
 end

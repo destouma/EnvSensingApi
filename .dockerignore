@@ -6,3 +6,5 @@ Dockerfile
 node_modules/
 tmp/pids/
 
+# Secrets are injected at runtime, never baked into the image
+.env

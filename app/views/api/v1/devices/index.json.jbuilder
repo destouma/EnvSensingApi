@@ -5,7 +5,6 @@ json.devices @devices do |device|
   json.description device.description
   json.sensors device.sensors do |sensor|
     json.id sensor.id
-    json.id sensor.id
     json.uuid sensor.uuid
     json.name sensor.name
     json.description sensor.description
