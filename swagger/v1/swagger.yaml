@@ -1,28 +1,31 @@
 openapi: 3.0.1
 security:
-  - regularSecurity: []
-    OAuth2:
-      - readOnly
+  - apiKey: []
 servers:
   - url: 'http://192.168.1.238'
     description: integration
 components:
   securitySchemes:
-    regularSecurity:
+    deviceToken:
       type: http
-      scheme: basic
-    OAuth2:
-      type: oauth2
-      flows:
-        authorizationCode:
-          scopes:
-            readOnly: read objects in your account
-          authorizationUrl: https://example.com/oauth/authorize
-          tokenUrl: https://example.com/oauth/token      
+      scheme: bearer
+      description: >-
+        Device token (`esd_...`), returned once when the device is created or issued with
+        `rake auth:issue_device_token`. Lets a device post readings and pictures for its own sensors only.
+    apiKey:
+      type: http
+      scheme: bearer
+      description: >-
+        API key (`esk_...`) created with `rake auth:create_api_key[name,scope]`.
+        Scope `read` allows the GET endpoints, scope `admin` also allows creating devices and sensors.
 info:
   title: Environmental Sensing API
   version: v1
-  description: Simple API so manage sensors
+  description: >-
+    Simple API to manage sensors.
+    All endpoints except the current date time require an `Authorization: Bearer <token>` header
+    and answer 401 without a valid token, 403 when the token is not allowed for the endpoint,
+    and 429 when rate limited.
   contact:
     name: API support
     email: mdsoftengr@gmail.com
@@ -158,6 +161,11 @@ paths:
       tags:
         - Devices
       operationId: post-api-v1-devices
+      security:
+        - apiKey: []
+      description: >-
+        Create a new device (API key with `admin` scope). The response contains the device's
+        `api_token`, which is shown only once.
       responses:
         '200':
           description: OK
@@ -188,6 +196,9 @@ paths:
                     type: string
                     maxLength: 25
                     pattern: ˆ[1-9][0-9]{3}\-[0-1]?[1-9]\-[0-3]?[0-9]+T.+[\.][0-9]+(Z|[\+\-].+)
+                  api_token:
+                    type: string
+                    description: Device token, shown only once
               examples:
                 example-1:
                   value:
@@ -197,6 +208,7 @@ paths:
                     description: test creation
                     created_at: '2020-10-18T11:56:10.652Z'
                     updated_at: '2020-10-18T11:56:10.652Z'
+                    api_token: esd_EXAMPLE-not-a-real-token
         '400':
           description: Error see message
           content:
@@ -383,6 +395,8 @@ paths:
       tags:
         - Sensors
       operationId: post-api-v1-sensors
+      security:
+        - apiKey: []
       responses:
         '200':
           description: OK
@@ -650,6 +664,8 @@ paths:
       summary: Add a new reading for a sensor
       description: And sensor reading in back end database
       operationId: post-api-v1-sensor-readings
+      security:
+        - deviceToken: []
       requestBody:
         content:
           application/json:
@@ -742,5 +758,6 @@ paths:
                   value:
                     current_date_time: '2020-11-03T11:05:30.001Z'
       operationId: get-api-v1-date_time-current_date_time.json
+      security: []
       description: Get current date time
 

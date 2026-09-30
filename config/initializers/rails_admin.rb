@@ -43,10 +43,26 @@ RailsAdmin.config do |config|
   ## To disable Gravatar integration in Navigation Bar set to false
   # config.show_gravatar = true
 
+  ## == Tokens ==
+  # Tokens are issued with the auth:* rake tasks (the plaintext is shown once there).
+  # The admin can only list them and revoke them by setting revoked_at.
+  %w(DeviceToken ApiKey).each do |model|
+    config.model model do
+      list { exclude_fields :token_digest }
+      show { exclude_fields :token_digest }
+      edit { field :revoked_at }
+    end
+  end
+  config.model "Device" do
+    edit { exclude_fields :device_tokens }
+  end
+
   config.actions do
     dashboard                     # mandatory
     index                         # mandatory
-    new
+    new do
+      except %w(DeviceToken ApiKey)
+    end
     export
     bulk_delete
     show

@@ -15,4 +15,5 @@
 #
 class Device < ApplicationRecord
   has_many :sensors
+  has_many :device_tokens, dependent: :destroy
 end

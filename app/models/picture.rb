@@ -27,13 +27,18 @@ class Picture < ApplicationRecord
 
   validates :file_name, presence: true, format: { with: FILE_NAME_FORMAT }
 
-  # Absolute path of the stored file, or nil if the file is missing or
-  # resolves outside STORAGE_DIR (e.g. rows created before file names were validated).
+  def self.storage_dir_for(device)
+    STORAGE_DIR.join(device.id.to_s)
+  end
+
+  # Absolute path of the stored file, or nil if the file is missing or resolves
+  # outside its device's directory (e.g. rows created before file names were validated).
   def file_path
     return unless file_name.to_s.match?(FILE_NAME_FORMAT)
 
-    root = File.realpath(STORAGE_DIR)
-    path = File.realpath(STORAGE_DIR.join(file_name))
+    dir = self.class.storage_dir_for(sensor.device)
+    root = File.realpath(dir)
+    path = File.realpath(dir.join(file_name))
     path if path.start_with?(root + File::SEPARATOR) && File.file?(path)
   rescue Errno::ENOENT
     nil

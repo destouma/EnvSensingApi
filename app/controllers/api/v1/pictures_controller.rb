@@ -1,4 +1,6 @@
-class Api::V1::PicturesController < ApplicationController
+class Api::V1::PicturesController < Api::V1::BaseController
+  before_action :require_read_scope!, only: [:index, :file]
+  before_action :require_device!, only: [:create, :upload]
 
   def index
     if params[:sensor_uuid]
@@ -15,7 +17,8 @@ class Api::V1::PicturesController < ApplicationController
 
   def create
     if params[:sensor_uuid]
-      sensor = Sensor.where(uuid: params[:sensor_uuid]).first
+      # A device may only register pictures for its own sensors.
+      sensor = current_device.sensors.where(uuid: params[:sensor_uuid]).first
       if sensor
         @picture = Picture.new
         @picture.sensor_id = sensor.id
@@ -35,7 +38,7 @@ class Api::V1::PicturesController < ApplicationController
   end
 
   def upload
-    uploader = Api::V1::PictureUploader.new
+    uploader = Api::V1::PictureUploader.new(current_device)
     uploader.store!(params.require(:file))
   rescue CarrierWave::IntegrityError => e
     render json: { message: "Error: #{e.message}" }, status: :unprocessable_entity

@@ -22,6 +22,13 @@ RSpec.configure do |config|
         version: 'v1'
       },
       paths: {},
+      components: {
+        securitySchemes: {
+          deviceToken: { type: :http, scheme: :bearer },
+          apiKey: { type: :http, scheme: :bearer }
+        }
+      },
+      security: [{ apiKey: [] }],
       servers: [
         {
           url: 'http://{defaultHost}',

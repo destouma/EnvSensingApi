@@ -51,6 +51,16 @@
 						"v1",
 						"sensor_readings.json"
 					]
+				},
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{device_token}}",
+							"type": "string"
+						}
+					]
 				}
 			},
 			"response": []
@@ -102,6 +112,16 @@
 						"api",
 						"v1",
 						"sensor_readings.json"
+					]
+				},
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{device_token}}",
+							"type": "string"
+						}
 					]
 				}
 			},
@@ -253,6 +273,16 @@
 						"v1",
 						"pictures.json"
 					]
+				},
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{device_token}}",
+							"type": "string"
+						}
+					]
 				}
 			},
 			"response": []
@@ -284,6 +314,16 @@
 						"v1",
 						"pictures",
 						"upload.json"
+					]
+				},
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{device_token}}",
+							"type": "string"
+						}
 					]
 				}
 			},
@@ -378,6 +418,9 @@
 						"date_time",
 						"current_date_time.json"
 					]
+				},
+				"auth": {
+					"type": "noauth"
 				}
 			},
 			"response": []
@@ -781,6 +824,26 @@
 				}
 			},
 			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{api_key}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "api_key",
+			"value": ""
+		},
+		{
+			"key": "device_token",
+			"value": ""
 		}
 	]
 }

@@ -2,6 +2,7 @@
 require 'swagger_helper'
 
 describe 'Sensor readings API' do
+  let(:Authorization) { "Bearer #{ApiKey.create!(name: 'docs', scope: 'read').token}" }
   path '/api/v1/sensor_readings' do
     get 'Retrives all sensor_readings' do
       tags 'Sensor readings'
@@ -14,6 +15,11 @@ describe 'Sensor readings API' do
 
     post 'Creates a sensor reading' do
       tags 'Sensor readings'
+      security [deviceToken: []]
+      let(:Authorization) do
+        device = Device.create!(uuid: 'docs-device', name: 'Docs')
+        "Bearer #{device.device_tokens.create!.token}"
+      end
       consumes 'application/json', 'application/xml'
       parameter schema: {
           type: :object,

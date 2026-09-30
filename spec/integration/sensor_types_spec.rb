@@ -2,6 +2,7 @@
 require 'swagger_helper'
 
 describe 'Sensor types API' do
+  let(:Authorization) { "Bearer #{ApiKey.create!(name: 'docs', scope: 'read').token}" }
 
   path '/api/v1/sensor_types' do
     get 'Retrives all sensor types' do

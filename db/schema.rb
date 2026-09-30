@@ -10,10 +10,33 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2022_03_18_123525) do
+ActiveRecord::Schema.define(version: 2026_09_30_120100) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "api_keys", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "scope", null: false
+    t.string "token_digest", null: false
+    t.datetime "last_used_at"
+    t.datetime "revoked_at"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["token_digest"], name: "index_api_keys_on_token_digest", unique: true
+  end
+
+  create_table "device_tokens", force: :cascade do |t|
+    t.bigint "device_id", null: false
+    t.string "token_digest", null: false
+    t.string "name"
+    t.datetime "last_used_at"
+    t.datetime "revoked_at"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["device_id"], name: "index_device_tokens_on_device_id"
+    t.index ["token_digest"], name: "index_device_tokens_on_token_digest", unique: true
+  end
 
   create_table "devices", force: :cascade do |t|
     t.string "uuid"
@@ -64,6 +87,7 @@ ActiveRecord::Schema.define(version: 2022_03_18_123525) do
     t.index ["uuid"], name: "index_sensors_on_uuid", unique: true
   end
 
+  add_foreign_key "device_tokens", "devices"
   add_foreign_key "pictures", "sensors"
   add_foreign_key "sensor_readings", "sensors"
   add_foreign_key "sensors", "devices"

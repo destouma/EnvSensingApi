@@ -1,4 +1,6 @@
-class Api::V1::SensorReadingsController < ApplicationController
+class Api::V1::SensorReadingsController < Api::V1::BaseController
+  before_action :require_read_scope!, only: :index
+  before_action :require_device!, only: :create
 
   # GET /api/v1/sensor_readings
   # GET /api/v1/sensor_readings.json
@@ -20,7 +22,8 @@ class Api::V1::SensorReadingsController < ApplicationController
   # POST /api/v1/sensor_readings
   # POST /api/v1/sensor_readings.json
   def create
-    sensor = Sensor.where(uuid: params[:sensor_uuid]).first
+    # A device may only post readings for its own sensors.
+    sensor = current_device.sensors.where(uuid: params[:sensor_uuid]).first
     if sensor
       @sensor_reading = SensorReading.new()
       @sensor_reading.sensorvalue  = params[:sensor_value]

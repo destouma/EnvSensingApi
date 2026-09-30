@@ -63,3 +63,5 @@ gem 'rails_admin', '~> 2.1.1'
 
 gem 'unicorn'
 
+
+gem "rack-attack", "~> 6.7"

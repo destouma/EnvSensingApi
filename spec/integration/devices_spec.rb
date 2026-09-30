@@ -2,6 +2,7 @@
 require 'swagger_helper'
 
 describe 'Devices API' do
+  let(:Authorization) { "Bearer #{ApiKey.create!(name: 'docs', scope: 'read').token}" }
 
   path '/api/v1/devices' do
     get 'Retrives all devices' do

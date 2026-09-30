@@ -10,8 +10,10 @@ module Api
 
       before :cache, :check_image_signature!
 
+      # model is the uploading Device: each device gets its own directory,
+      # so a device cannot overwrite another device's pictures.
       def store_dir
-        Picture::STORAGE_DIR.to_s
+        Picture.storage_dir_for(model).to_s
       end
 
       def extension_allowlist
