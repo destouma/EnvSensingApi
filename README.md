@@ -56,34 +56,80 @@ Production:
 
 3 containers:
 * app : ruby on rails app, using PUMA, running as a non-root user
-* db  : postgres
-* web : nginx
+* db  : postgres; the app connects as its own non-superuser role (`envsensing`)
+* web : nginx, terminates HTTPS and serves picture files
 
-In the folder, create the `.env` file first (it is git-ignored, never commit it):
+Volumes: `postgres_data` (database) and `pictures` (uploaded pictures), both kept across rebuilds.
+
+1. Create the `.env` file (git-ignored, never commit it) and fill it in, see `.env.example`:
 ```shell script
 $ cp .env.example .env
-$ openssl rand -hex 64   # paste as SECRET_KEY_BASE, then set ADMIN_USERNAME / ADMIN_PASSWORD
+$ openssl rand -hex 64   # SECRET_KEY_BASE
+$ openssl rand -hex 24   # ADMIN_PASSWORD, POSTGRES_PASSWORD, DATABASE_PASSWORD (one each)
 ```
-`/admin` is protected by HTTP Basic auth and returns 403 in production when the admin credentials are not set.
+   Set `APP_HOSTS` to the addresses clients use, e.g. `192.168.1.238`.
 
+2. Create the TLS certificate for the same addresses (see HTTPS below):
+```shell script
+$ bin/generate-lan-cert 192.168.1.238
+```
+
+3. Start:
 ```shell script
 $ sudo docker compose up -d --build
 ```
 
-The app container creates and migrates the database on start (`db:prepare`), no manual step needed.
+The API is served on **https://<host>:8443** (`HTTPS_PORT`); **http://<host>:8080** (`HTTP_PORT`) only
+redirects to HTTPS. The app container creates and migrates the database on start (`db:prepare`).
 Optionally create the standard sensor types with `sudo docker compose exec app bin/rails db:seed`.
+`/admin` and `/api-docs` ask for `ADMIN_USERNAME` / `ADMIN_PASSWORD`.
 
-Upgrading an existing database: missing reading/picture dates are filled from the time the row was
-stored and missing device/sensor names from their uuid. If rows cannot be fixed automatically (for
-example a reading without a sensor), the migration stops, lists them and changes nothing: fix or delete
-those rows and restart the app container.
+HTTPS (LAN, private CA):
+------------
+
+`bin/generate-lan-cert <host>...` creates a private CA (`docker/web/ca/`, valid 10 years) and a server
+certificate signed by it (`docker/web/certs/`, valid 825 days) for every IP address / host name given.
+Both folders are git- and docker-ignored; only the server certificate and key are mounted (read-only)
+into nginx. Keep `docker/web/ca/ca.key` private: it is only needed to issue a new server certificate.
+
+Clients trust the **CA certificate** `docker/web/ca/ca.crt`, so renewing the server certificate or
+adding a host (run the script again, then `docker compose restart web`) does not require updating devices.
+
+- ESP32 (`WiFiClientSecure`): `client.setCACert(ca_pem);` with the content of `ca.crt`, and connect
+  with the same host as in the certificate (the IP address).
+- MKR1010 (WiFiNINA): add `ca.crt` to the NINA module's certificate store with the Arduino IDE
+  firmware updater ("Upload SSL root certificates"), then use `WiFiSSLClient`.
+- Browsers / computers: import `ca.crt` as a trusted root. HSTS is deliberately off, so without
+  the CA installed you can still click through the certificate warning.
+- curl: `curl --cacert docker/web/ca/ca.crt https://192.168.1.238:8443/up` (on Windows add
+  `--ssl-no-revoke`: Windows' TLS library wants revocation information a private CA does not publish).
+
+nginx accepts TLS 1.2 and 1.3 only, limits each IP to 20 requests/s (burst 40, then 429), drops slow
+clients, and hides its version. Requests whose `Host` is not in `APP_HOSTS` are rejected (403).
+
+Upgrading an existing installation:
+------------
+
+- Database role: `POSTGRES_PASSWORD` / `DATABASE_PASSWORD` are only applied when the database volume
+  is created. For a database created before (app connected as `postgres` / `postgres`), run once after
+  adding them to `.env`:
+```shell script
+$ sudo docker compose up -d db
+$ sudo docker compose exec -T db bash -s < docker/db/adopt-app-role.sh
+$ sudo docker compose up -d
+```
+- Pictures: they now live in the `pictures` volume. Copy existing ones from the old container before
+  recreating it: `sudo docker compose cp app:/rails/storage/pictures ./pictures-backup`, then after the
+  upgrade `sudo docker compose cp ./pictures-backup/. app:/rails/storage/pictures/`.
+- Data: missing reading/picture dates are filled from the time the row was stored and missing
+  device/sensor names from their uuid. If rows cannot be fixed automatically (for example a reading
+  without a sensor), the migration stops, lists them and changes nothing: fix or delete those rows and
+  restart the app container.
 
 Data volume: one reading per minute and per sensor is about 525,000 rows a year. Readings are read
 through a `(sensor_id, date_time, id)` index, so a page takes well under a millisecond whatever the
 table size (measured on 2 million rows). Partitioning or TimescaleDB is not needed before hundreds of
 millions of rows.
-
-The server will listen port 8080.
 
 Authentication:
 ============

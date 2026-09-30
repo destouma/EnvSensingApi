@@ -1,7 +1,8 @@
-version: '3'
-
+# Secrets and settings come from .env (see .env.example); compose also reads it for ${...} below.
 volumes:
   postgres_data: {}
+  # Uploaded pictures, kept across container rebuilds
+  pictures: {}
 
 services:
   app:
@@ -10,29 +11,56 @@ services:
       dockerfile: ./docker/app/Dockerfile
     environment:
       RAILS_ENV: production
-    # SECRET_KEY_BASE, ADMIN_USERNAME, ADMIN_PASSWORD (see .env.example)
+    # SECRET_KEY_BASE, ADMIN_USERNAME, ADMIN_PASSWORD, DATABASE_PASSWORD, APP_HOSTS
     env_file: .env
+    volumes:
+      - pictures:/rails/storage
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
     # The entrypoint runs db:prepare on start, so wait until Postgres accepts connections.
     depends_on:
       db:
         condition: service_healthy
+
   db:
     image: postgres:17
     environment:
+      # Superuser, only used by docker/db/init-app-role.sh and for maintenance
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      # The application connects as this non-superuser role, which owns only its database
+      APP_DB_PASSWORD: ${DATABASE_PASSWORD:?set DATABASE_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/db/init-app-role.sh:/docker-entrypoint-initdb.d/init-app-role.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 10
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   web:
     build:
       context: .
       dockerfile: ./docker/web/Dockerfile
+    environment:
+      # Used in the HTTP -> HTTPS redirect
+      HTTPS_PORT: ${HTTPS_PORT:-8443}
+    volumes:
+      # bin/generate-lan-cert
+      - ./docker/web/certs:/etc/nginx/certs:ro
+      # nginx sends picture files itself (X-Accel-Redirect) after Rails checked the token
+      - pictures:/rails/storage:ro
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     ports:
-      - 8080:80
+      - ${HTTP_PORT:-8080}:80
+      - ${HTTPS_PORT:-8443}:443
+    restart: unless-stopped

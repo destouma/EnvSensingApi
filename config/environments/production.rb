@@ -21,10 +21,15 @@ Rails.application.configure do
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
   # config.asset_host = "http://assets.example.com"
 
-  # TLS is not terminated yet (nginx only serves HTTP until the TLS phase), so SSL
-  # enforcement stays off for now. Enable both once nginx terminates HTTPS:
-  # config.assume_ssl = true
-  # config.force_ssl = true
+  # nginx terminates TLS (and redirects plain HTTP), so every request reaching the app came over HTTPS.
+  config.assume_ssl = true
+  # Secure cookies and HTTPS-only URLs. No HSTS: with the self-signed LAN certificate it would stop
+  # browsers from letting you through a certificate warning; install docker/web/ca/ca.crt instead.
+  config.force_ssl = true
+  config.ssl_options = { hsts: false }
+
+  # nginx sends picture files itself once Rails has checked the token (see docker/web/nginx.conf).
+  config.action_dispatch.x_sendfile_header = "X-Accel-Redirect"
 
   # Log to STDOUT with the current request id as a default log tag.
   config.log_tags = [ :request_id ]
@@ -56,11 +61,11 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [ :id ]
 
   # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  #
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # APP_HOSTS: comma separated host names / IPs clients use (the same as the certificate), e.g.
+  # "192.168.1.238,envsensing.lan". Requests for any other Host header are rejected.
+  if ENV["APP_HOSTS"].present?
+    config.hosts = ENV["APP_HOSTS"].split(",").map(&:strip)
+    # The container health check calls http://localhost:3000/up.
+    config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  end
 end

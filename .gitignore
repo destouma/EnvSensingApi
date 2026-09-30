@@ -30,3 +30,7 @@
 
 # Local environment / secrets
 .env
+
+# TLS: private CA and server certificate (bin/generate-lan-cert), never commit keys
+/docker/web/ca/
+/docker/web/certs/

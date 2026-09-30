@@ -24,6 +24,7 @@ test:
 production:
   <<: *default
   database: envsensing_production
-  username: postgres
-  password: postgres
-  host: db
+  # Non-superuser role created by docker/db/init-app-role.sh; password from .env
+  username: <%= ENV.fetch("DATABASE_USERNAME", "envsensing") %>
+  password: <%= ENV["DATABASE_PASSWORD"] %>
+  host: <%= ENV.fetch("DATABASE_HOST", "db") %>

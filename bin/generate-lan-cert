@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Generates the TLS certificate nginx serves on the LAN, signed by a private CA.
+#
+#   bin/generate-lan-cert <host> [<host> ...]
+#   bin/generate-lan-cert 192.168.1.238 envsensing.lan
+#
+# Every <host> (IP address or DNS name) that clients use to reach the server must be listed.
+#
+# docker/web/ca/ca.crt     CA certificate: install it on devices and browsers (public)
+# docker/web/ca/ca.key     CA private key: keep it private, only needed to issue new server certificates
+# docker/web/certs/        server certificate and key, mounted read-only into the nginx container
+#
+# The CA is created once (valid 10 years) and reused: renewing the server certificate (valid 825 days)
+# or adding a host does not require updating the devices. RSA 2048 keeps TLS within reach of
+# microcontrollers (ESP32, WiFiNINA on the MKR1010).
+set -euo pipefail
+export MSYS_NO_PATHCONV=1 # Git Bash on Windows: keep "/CN=..." as is
+
+if [ "$#" -lt 1 ]; then
+  sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'
+  exit 1
+fi
+
+# Relative paths from the repository root: absolute MSYS paths would reach openssl.exe unconverted on Windows.
+cd "$(dirname "$0")/.."
+ca_dir="docker/web/ca"
+cert_dir="docker/web/certs"
+mkdir -p "$ca_dir" "$cert_dir"
+chmod 700 "$ca_dir"
+
+if [ ! -f "$ca_dir/ca.key" ]; then
+  echo "Creating the CA (docker/web/ca/)"
+  openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 3650 \
+    -keyout "$ca_dir/ca.key" -out "$ca_dir/ca.crt" \
+    -subj "/CN=EnvSensing LAN CA" \
+    -addext "basicConstraints=critical,CA:TRUE,pathlen:0" \
+    -addext "keyUsage=critical,keyCertSign,cRLSign" 2>/dev/null
+  chmod 600 "$ca_dir/ca.key"
+fi
+
+san=""
+for host in "$@"; do
+  if [[ "$host" =~ ^[0-9.]+$ || "$host" == *:* ]]; then san+="IP:$host,"; else san+="DNS:$host,"; fi
+done
+san="${san%,}"
+
+ext="$cert_dir/server.ext.tmp"
+csr="$cert_dir/server.csr.tmp"
+trap 'rm -f "$ext" "$csr"' EXIT
+printf '%s\n' \
+  "subjectAltName=$san" \
+  "basicConstraints=critical,CA:FALSE" \
+  "keyUsage=critical,digitalSignature,keyEncipherment" \
+  "extendedKeyUsage=serverAuth" > "$ext"
+
+openssl req -newkey rsa:2048 -sha256 -nodes -keyout "$cert_dir/server.key" -out "$csr" -subj "/CN=$1" 2>/dev/null
+openssl x509 -req -in "$csr" -CA "$ca_dir/ca.crt" -CAkey "$ca_dir/ca.key" -set_serial "0x$(openssl rand -hex 16)" \
+  -days 825 -sha256 -extfile "$ext" -out "$cert_dir/server.crt" 2>/dev/null
+chmod 600 "$cert_dir/server.key"
+
+openssl verify -CAfile "$ca_dir/ca.crt" "$cert_dir/server.crt" >/dev/null
+echo "Server certificate for $san, valid until $(openssl x509 -in "$cert_dir/server.crt" -noout -enddate | cut -d= -f2)"
+echo "CA certificate to install on devices and browsers: docker/web/ca/ca.crt"
+echo "Restart nginx to use it: docker compose restart web"

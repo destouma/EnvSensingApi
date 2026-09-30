@@ -10,6 +10,10 @@
 # Ignore all environment files (secrets are injected at runtime, never baked into the image).
 /.env*
 
+# TLS keys (bin/generate-lan-cert) are mounted into nginx at runtime, never copied into images.
+/docker/web/ca/
+/docker/web/certs/
+
 # Ignore all default key files.
 /config/master.key
 /config/credentials/*.key
