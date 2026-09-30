@@ -19,17 +19,19 @@ RSpec.describe 'API authentication', type: :request do
 
   # endpoint => which caller is allowed (:read also allows admin keys)
   endpoints = [
-    [:get,  '/api/v1/devices.json', :read],
-    [:post, '/api/v1/devices.json', :admin],
-    [:get,  '/api/v1/sensors.json?device_uuid=dev-1', :read],
-    [:post, '/api/v1/sensors.json', :admin],
-    [:get,  '/api/v1/sensor_types.json', :read],
-    [:get,  '/api/v1/sensor_readings.json?sensor_uuid=sensor-1', :read],
-    [:post, '/api/v1/sensor_readings.json', :device],
-    [:get,  '/api/v1/pictures.json?sensor_uuid=sensor-1', :read],
-    [:get,  '/api/v1/pictures/file.json?id=1', :read],
-    [:post, '/api/v1/pictures.json', :device],
-    [:post, '/api/v1/pictures/upload.json', :device]
+    [:get,  '/api/v1/devices', :read],
+    [:get,  '/api/v1/devices/dev-1', :read],
+    [:post, '/api/v1/devices', :admin],
+    [:get,  '/api/v1/devices/dev-1/sensors', :read],
+    [:post, '/api/v1/devices/dev-1/sensors', :admin],
+    [:get,  '/api/v1/sensors/sensor-1', :read],
+    [:get,  '/api/v1/sensor_types', :read],
+    [:get,  '/api/v1/sensors/sensor-1/readings', :read],
+    [:post, '/api/v1/sensors/sensor-1/readings', :device],
+    [:post, '/api/v1/readings', :device],
+    [:get,  '/api/v1/sensors/sensor-1/pictures', :read],
+    [:post, '/api/v1/sensors/sensor-1/pictures', :device],
+    [:get,  '/api/v1/pictures/1/file', :read]
   ]
 
   endpoints.each do |verb, path, allowed|
@@ -38,6 +40,7 @@ RSpec.describe 'API authentication', type: :request do
         call(verb, path)
         expect(response).to have_http_status(:unauthorized)
         expect(response.headers['WWW-Authenticate']).to start_with('Bearer')
+        expect(response.parsed_body.dig('error', 'code')).to eq('unauthorized')
       end
 
       it 'rejects an unknown token' do
@@ -60,67 +63,75 @@ RSpec.describe 'API authentication', type: :request do
         permitted = caller == allowed || (allowed == :read && caller == :admin)
 
         it "#{permitted ? 'allows' : 'forbids'} a #{caller} token" do
+          call(verb, path, bearer(instance_exec(&token)))
           if permitted
-            begin
-              call(verb, path, bearer(instance_exec(&token)))
-              expect(response).not_to have_http_status(:unauthorized)
-              expect(response).not_to have_http_status(:forbidden)
-            rescue ActiveRecord::RecordNotFound, ActionController::ParameterMissing
-              # The action ran and failed on the empty test request: authentication passed.
-            end
+            # The empty test request may fail validation (400/404/422), but it got past authentication.
+            expect(response).not_to have_http_status(:unauthorized)
+            expect(response).not_to have_http_status(:forbidden)
           else
-            call(verb, path, bearer(instance_exec(&token)))
             expect(response).to have_http_status(:forbidden)
+            expect(response.parsed_body.dig('error', 'code')).to eq('forbidden')
           end
         end
       end
     end
   end
 
-  it 'keeps GET /api/v1/date_time/current_date_time public' do
-    get '/api/v1/date_time/current_date_time.json'
+  it 'keeps GET /api/v1/time public' do
+    get '/api/v1/time'
     expect(response).to have_http_status(:ok)
   end
 
   it 'rejects a token sent with another scheme' do
-    get '/api/v1/sensor_types.json', headers: { 'Authorization' => "Basic #{read_key.token}" }
+    get '/api/v1/sensor_types', headers: { 'Authorization' => "Basic #{read_key.token}" }
     expect(response).to have_http_status(:unauthorized)
   end
 
   describe 'device provisioning' do
     it 'returns a device token once when an admin creates a device, and the token works' do
-      post '/api/v1/devices.json', params: { uuid: 'dev-new', name: 'New' }, headers: bearer(admin_key.token)
+      post '/api/v1/devices', params: { uuid: 'dev-new', name: 'New' }, headers: bearer(admin_key.token), as: :json
 
-      expect(response).to have_http_status(:ok)
-      token = JSON.parse(response.body)['api_token']
+      expect(response).to have_http_status(:created)
+      token = response.parsed_body['api_token']
       expect(token).to start_with('esd_')
       new_device = Device.find_by!(uuid: 'dev-new')
       expect(new_device.device_tokens.first.token_digest).to eq(Digest::SHA256.hexdigest(token))
 
+      get '/api/v1/devices/dev-new', headers: bearer(read_key.token)
+      expect(response.parsed_body).not_to have_key('api_token')
+
       Sensor.create!(uuid: 'sensor-new', name: 'Temp', device: new_device, sensor_type: sensor_type)
-      post '/api/v1/sensor_readings.json', params: { sensor_uuid: 'sensor-new', sensor_value: 2150 }, headers: bearer(token)
-      expect(response).to have_http_status(:ok)
+      post '/api/v1/sensors/sensor-new/readings', params: { value: 2150 }, headers: bearer(token), as: :json
+      expect(response).to have_http_status(:created)
     end
   end
 
-  describe 'POST /api/v1/sensor_readings' do
-    it "records a reading for the device's own sensor and tracks token usage" do
-      post '/api/v1/sensor_readings.json', params: { sensor_uuid: sensor.uuid, sensor_value: 2150 },
-                                           headers: bearer(device_token.token)
+  describe 'device isolation' do
+    let(:other_device) { Device.create!(uuid: 'dev-2', name: 'Other') }
+    let!(:other_sensor) { Sensor.create!(uuid: 'sensor-2', name: 'Temp', device: other_device, sensor_type: sensor_type) }
 
-      expect(response).to have_http_status(:ok)
-      expect(sensor.sensor_readings.first.sensorvalue).to eq(2150)
+    it "records a reading for the device's own sensor and tracks token usage" do
+      post '/api/v1/sensors/sensor-1/readings', params: { value: 2150 }, headers: bearer(device_token.token), as: :json
+
+      expect(response).to have_http_status(:created)
+      expect(sensor.sensor_readings.first.value).to eq(2150)
       expect(device_token.reload.last_used_at).to be_present
     end
 
-    it "rejects a reading for another device's sensor" do
-      other_device = Device.create!(uuid: 'dev-2', name: 'Other')
-      other_sensor = Sensor.create!(uuid: 'sensor-2', name: 'Temp', device: other_device, sensor_type: sensor_type)
+    it "rejects a reading for another device's sensor as not found" do
+      post '/api/v1/sensors/sensor-2/readings', params: { value: 1 }, headers: bearer(device_token.token), as: :json
 
-      post '/api/v1/sensor_readings.json', params: { sensor_uuid: other_sensor.uuid, sensor_value: 1 },
-                                           headers: bearer(device_token.token)
+      expect(response).to have_http_status(:not_found)
+      expect(SensorReading.count).to eq(0)
+    end
 
-      expect(response).to have_http_status(:bad_request)
+    it "rejects a whole batch that contains another device's sensor" do
+      post '/api/v1/readings',
+           params: { readings: [{ sensor_uuid: 'sensor-1', value: 1 }, { sensor_uuid: 'sensor-2', value: 2 }] },
+           headers: bearer(device_token.token), as: :json
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body.dig('error', 'details')).to eq('readings[1].sensor_uuid' => ['sensor not found'])
       expect(SensorReading.count).to eq(0)
     end
   end
@@ -138,10 +149,10 @@ RSpec.describe 'API authentication', type: :request do
 
     it 'throttles a token after 300 requests in 5 minutes' do
       headers = bearer(read_key.token)
-      300.times { get '/api/v1/sensor_types.json', headers: headers }
+      300.times { get '/api/v1/sensor_types', headers: headers }
       expect(response).to have_http_status(:ok)
 
-      get '/api/v1/sensor_types.json', headers: headers
+      get '/api/v1/sensor_types', headers: headers
       expect(response).to have_http_status(:too_many_requests)
       expect(response.headers['Retry-After'].to_i).to be_positive
     end

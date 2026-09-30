@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -49,7 +49,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_120100) do
   create_table "pictures", force: :cascade do |t|
     t.bigint "sensor_id", null: false
     t.string "file_name"
-    t.string "file_url"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "date_time", precision: nil

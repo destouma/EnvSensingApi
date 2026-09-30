@@ -1,6 +1,1 @@
-json.sensor_types @sensor_types do |sensor_type|
-  json.id sensor_type.id
-  json.name sensor_type.name
-  json.unit sensor_type.unit
-  json.pow10multi sensor_type.pow10multi
-end
+json.sensor_types @sensor_types, partial: "api/v1/sensor_types/sensor_type", as: :sensor_type

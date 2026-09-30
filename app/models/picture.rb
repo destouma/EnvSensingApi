@@ -5,7 +5,6 @@
 #  id         :bigint           not null, primary key
 #  date_time  :datetime
 #  file_name  :string
-#  file_url   :string
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
 #  sensor_id  :bigint           not null
@@ -19,26 +18,28 @@
 #  fk_rails_...  (sensor_id => sensors.id)
 #
 class Picture < ApplicationRecord
+  include DeviceDateTime
+
   STORAGE_DIR = Rails.root.join("storage", "pictures")
-  # Plain file name only: no directory separators, no leading dot, image extension.
-  FILE_NAME_FORMAT = /\A[\w+-][\w.+-]*\.(jpe?g|png)\z/i
 
   belongs_to :sensor
 
-  validates :file_name, presence: true, format: { with: FILE_NAME_FORMAT }
+  # The stored (server generated) file name is kept in the file_name column.
+  mount_uploader :image, PictureUploader, mount_on: :file_name
+
+  validates :image, presence: true
 
   def self.storage_dir_for(device)
     STORAGE_DIR.join(device.id.to_s)
   end
 
   # Absolute path of the stored file, or nil if the file is missing or resolves
-  # outside its device's directory (e.g. rows created before file names were validated).
+  # outside its device's directory (e.g. rows created before file names were server generated).
   def file_path
-    return unless file_name.to_s.match?(FILE_NAME_FORMAT)
+    return if file_name.blank?
 
-    dir = self.class.storage_dir_for(sensor.device)
-    root = File.realpath(dir)
-    path = File.realpath(dir.join(file_name))
+    root = File.realpath(self.class.storage_dir_for(sensor.device))
+    path = File.realpath(image.path)
     path if path.start_with?(root + File::SEPARATOR) && File.file?(path)
   rescue Errno::ENOENT
     nil

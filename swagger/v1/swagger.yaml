@@ -1,227 +1,141 @@
+---
 openapi: 3.0.1
-security:
-  - apiKey: []
-servers:
-  - url: 'http://192.168.1.238'
-    description: integration
-components:
-  securitySchemes:
-    deviceToken:
-      type: http
-      scheme: bearer
-      description: >-
-        Device token (`esd_...`), returned once when the device is created or issued with
-        `rake auth:issue_device_token`. Lets a device post readings and pictures for its own sensors only.
-    apiKey:
-      type: http
-      scheme: bearer
-      description: >-
-        API key (`esk_...`) created with `rake auth:create_api_key[name,scope]`.
-        Scope `read` allows the GET endpoints, scope `admin` also allows creating devices and sensors.
 info:
   title: Environmental Sensing API
   version: v1
-  description: >-
-    Simple API to manage sensors.
-    All endpoints except the current date time require an `Authorization: Bearer <token>` header
-    and answer 401 without a valid token, 403 when the token is not allowed for the endpoint,
-    and 429 when rate limited.
+  description: |
+    API to store and read environmental sensor readings and camera pictures.
+
+    **Authentication.** Every endpoint except `GET /api/v1/time` requires an `Authorization: Bearer <token>` header:
+    a device token (`esd_...`) for devices, or an API key (`esk_...`) with scope `read` or `admin`.
+    Responses: 401 without a valid token, 403 when the token is not allowed for the endpoint,
+    429 when rate limited (see the `Retry-After` header).
+
+    **Errors** always have the shape `{"error": {"code", "message", "details"}}`.
+
+    **Pagination.** Readings and pictures are returned newest first. Pass the `next_cursor` of a page
+    as `cursor` to get the next one; it is `null` on the last page.
   contact:
     name: API support
     email: mdsoftengr@gmail.com
+servers:
+- url: http://{defaultHost}
+  variables:
+    defaultHost:
+      default: localhost:3000
+security:
+- apiKey: []
 tags:
-  - name: Devices
-    description: All about the devices
-  - name: Sensor types
-    description: All about the sensor types
-  - name: Sensors
-    description: All about the sensors
-  - name: Sensor readings
-    description: All about the sensor readings
-  - name: DateTime
+- name: Devices
+- name: Sensors
+- name: Sensor types
+- name: Readings
+- name: Pictures
+- name: Time
 paths:
-  /api/v1/devices:
+  "/api/v1/devices":
     get:
-      summary: Get all devices
+      summary: List devices with their sensors
       tags:
-        - Devices
+      - Devices
+      description: API key with scope read or admin.
       responses:
         '200':
-          description: devices  found
+          description: devices
           content:
             application/json:
+              example:
+                devices:
+                - uuid: 123-123-000-000
+                  name: MKR1010 BME280
+                  description: Living room
+                  created_at: '2026-09-30T18:00:57.442Z'
+                  sensors:
+                  - uuid: 123-123-000-001
+                    name: Temperature Sensor
+                    description:
+                    device_uuid: 123-123-000-000
+                    sensor_type:
+                      id: 568
+                      name: Temperature
+                      unit: C
+                      pow10multi: -2
               schema:
                 type: object
                 properties:
                   devices:
                     type: array
                     items:
-                      type: object
-                      properties:
-                        '':
-                          type: integer
-                        uuid:
-                          type: string
-                          maxLength: 10
-                          pattern: ^[A-Za-z0-9]{3,10}$
-                        name:
-                          type: string
-                          maxLength: 256
-                          pattern: ^[A-Za-z0-9 ]*$
-                        description:
-                          type: string
-                          maxLength: 256
-                          pattern: ^[A-Za-z0-9 ]*$
-                        sensors:
-                          type: array
-                          maxItems: 100
-                          items:
-                            type: object
-                            properties:
-                              id:
-                                type: integer
-                              uuid:
-                                type: string
-                                maxLength: 10
-                                pattern: ^[A-Za-z0-9 ]*$
-                              name:
-                                type: string
-                                maxLength: 256
-                                pattern: ^[A-Za-z0-9 ]*$
-                              description:
-                                type: string
-                                maxLength: 256
-                                pattern: ^[A-Za-z0-9 ]*$             
-                              sensor_type:
-                                type: object
-                                properties:
-                                  id:
-                                    type: integer
-                                  name:
-                                    type: string
-                                    maxLength: 256
-                                    pattern: ^[A-Za-z0-9 ]*$
-                                  unit:
-                                    type: string
-                                    maxLength: 256
-                                    pattern: ^[A-Za-z0-9 ]*$
-                                  pow10multi:
-                                    type: integer
-                          
-              examples:
-                example-1:
-                  value:
-                    devices:
-                      - id: 1
-                        uuid: 123-123-000-000
-                        name: Test Device
-                        description: 'Test Device '
-                        sensors:
-                          - id: 1
-                            uuid: 123-123-000-001
-                            name: Temperature Sensor
-                            description: Temperature Sensor
-                            sensor_type:
-                              id: 1
-                              name: Temperature
-                              unit: C
-                              pow10multi: -2
-                          - id: 2
-                            uuid: 123-123-000-002
-                            name: Pressure Sensor
-                            description: Pressure Sensor
-                            sensor_type:
-                              id: 2
-                              name: Pressure
-                              unit: Pa
-                              pow10multi: -2
-                          - id: 3
-                            uuid: 123-123-000-003
-                            name: Battery Level Sensor
-                            description: Battery Level Sensor
-                            sensor_type:
-                              id: 3
-                              name: Battery Level
-                              unit: '%'
-                              pow10multi: 0
-                      - id: 2
-                        uuid: 123-123-000-002
-                        name: test
-                        description: test creation
-                        sensors: []
-                      - id: 7
-                        uuid: 123-123-000-004
-                        name: test
-                        description: test creation
-                        sensors: []
-      description: Get all devices
-      operationId: get-api-v1-devices
+                      "$ref": "#/components/schemas/device"
+                required:
+                - devices
+                additionalProperties: false
+        '401':
+          description: missing or invalid token
+          content:
+            application/json:
+              example:
+                error:
+                  code: unauthorized
+                  message: A valid bearer token is required
+              schema:
+                "$ref": "#/components/schemas/error"
+        '403':
+          description: token not allowed (e.g. a device token)
+          content:
+            application/json:
+              example:
+                error:
+                  code: forbidden
+                  message: This token is not allowed to use this endpoint
+              schema:
+                "$ref": "#/components/schemas/error"
     post:
       summary: Create a device
       tags:
-        - Devices
-      operationId: post-api-v1-devices
-      security:
-        - apiKey: []
-      description: >-
-        Create a new device (API key with `admin` scope). The response contains the device's
-        `api_token`, which is shown only once.
+      - Devices
+      description: 'API key with scope admin. The response contains the device token
+        (api_token), shown only once: store it in the device firmware.'
+      parameters: []
       responses:
-        '200':
-          description: OK
+        '201':
+          description: device created
           content:
             application/json:
+              example:
+                uuid: 123-123-000-010
+                name: ESP32 CAM
+                description: Garden camera
+                created_at: '2026-09-30T18:00:57.859Z'
+                sensors: []
+                api_token: esd_DAfDLXOcGKxLYC9pRvwP8JtxL_jNDjNpphw8HZiCaLo
               schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  uuid:
-                    type: string
-                    pattern: ^[A-Za-z0-9 ]*$
-                    maxLength: 10
-                  name:
-                    type: string
-                    pattern: ^[A-Za-z0-9 ]*$
-                    maxLength: 256
-                  description:
-                    type: string
-                    pattern: ^[A-Za-z0-9 ]*$
-                    maxLength: 256
-                  created_at:
-                    type: string
-                    maxLength: 25
-                    pattern: ˆ[1-9][0-9]{3}\-[0-1]?[1-9]\-[0-3]?[0-9]+T.+[\.][0-9]+(Z|[\+\-].+)
-                  updated_at:
-                    type: string
-                    maxLength: 25
-                    pattern: ˆ[1-9][0-9]{3}\-[0-1]?[1-9]\-[0-3]?[0-9]+T.+[\.][0-9]+(Z|[\+\-].+)
-                  api_token:
-                    type: string
-                    description: Device token, shown only once
-              examples:
-                example-1:
-                  value:
-                    id: 8
-                    uuid: 123-123-000-005
-                    name: test
-                    description: test creation
-                    created_at: '2020-10-18T11:56:10.652Z'
-                    updated_at: '2020-10-18T11:56:10.652Z'
-                    api_token: esd_EXAMPLE-not-a-real-token
-        '400':
-          description: Error see message
+                "$ref": "#/components/schemas/device_with_token"
+        '422':
+          description: invalid device (e.g. duplicate uuid)
           content:
             application/json:
+              example:
+                error:
+                  code: validation_failed
+                  message: Validation failed
+                  details:
+                    uuid:
+                    - has already been taken
+                    name:
+                    - can't be blank
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-              examples:
-                example-1:
-                  value:
-                    message: 'Error: duplicate device uuid'
+                "$ref": "#/components/schemas/error"
+        '403':
+          description: API key without admin scope
+          content:
+            application/json:
+              example:
+                error:
+                  code: forbidden
+                  message: This token is not allowed to use this endpoint
+              schema:
+                "$ref": "#/components/schemas/error"
       requestBody:
         content:
           application/json:
@@ -230,534 +144,853 @@ paths:
               properties:
                 uuid:
                   type: string
-                  maxLength: 10
-                  pattern: ^[A-Za-z0-9]{3,10}$
+                  example: 123-123-000-010
                 name:
                   type: string
-                  maxLength: 256
-                  pattern: ^[A-Za-z0-9 ]*$            
+                  example: ESP32 CAM
                 description:
                   type: string
-                  maxLength: 256
-                  pattern: ^[A-Za-z0-9 ]*$     
+                  example: Garden camera
               required:
-                - uuid
-                - name
-                - description
-            examples:
-              example-1:
-                value:
-                  uuid: 123-123-000-004
-                  name: test
-                  description: test creation
-        description: ''
-      description: Create a new device
-  /api/v1/sensor_types:
+              - uuid
+              - name
+  "/api/v1/devices/{uuid}":
+    parameters:
+    - name: uuid
+      in: path
+      required: true
+      schema:
+        type: string
     get:
-      summary: Get all sensor types
+      summary: Show a device with its sensors
       tags:
-        - Sensor types
+      - Devices
       responses:
         '200':
-          description: sensor types  found
+          description: device
           content:
             application/json:
+              example:
+                uuid: 123-123-000-000
+                name: MKR1010 BME280
+                description: Living room
+                created_at: '2026-09-30T18:00:57.960Z'
+                sensors:
+                - uuid: 123-123-000-001
+                  name: Temperature Sensor
+                  description:
+                  device_uuid: 123-123-000-000
+                  sensor_type:
+                    id: 574
+                    name: Temperature
+                    unit: C
+                    pow10multi: -2
+              schema:
+                "$ref": "#/components/schemas/device"
+        '404':
+          description: unknown device
+          content:
+            application/json:
+              example:
+                error:
+                  code: not_found
+                  message: Device not found
+              schema:
+                "$ref": "#/components/schemas/error"
+  "/api/v1/sensors/{sensor_uuid}/pictures":
+    parameters:
+    - name: sensor_uuid
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      summary: List the pictures of a sensor, newest first
+      tags:
+      - Pictures
+      description: API key with scope read or admin. Paginated like the readings.
+      parameters:
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 100
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: a page of pictures
+          content:
+            application/json:
+              example:
+                sensor:
+                  uuid: 123-123-000-005
+                  name: Camera
+                  description:
+                  device_uuid: 123-123-000-001
+                  sensor_type:
+                    id: 576
+                    name: Camera
+                    unit: jpg
+                    pow10multi: 0
+                pictures:
+                - id: 49
+                  date_time: '2026-09-30T12:00:00.000Z'
+                  sensor_uuid: 123-123-000-005
+                  size: 28
+                  url: "/api/v1/pictures/49/file"
+                next_cursor:
               schema:
                 type: object
                 properties:
-                  sensor_type:
+                  sensor:
+                    "$ref": "#/components/schemas/sensor"
+                  pictures:
                     type: array
-                    maxItems: 100
                     items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        name:
-                          type: string
-                          maxLength: 256
-                          pattern: ^[A-Za-z0-9 ]*$             
-                        unit:
-                          type: string
-                          maxLength: 256
-                          pattern: ^[A-Za-z0-9 ]*$
-                        pow10multi:
-                          type: integer
-              examples:
-                example-1:
-                  value:
-                    sensor_types:
-                      - id: 1
-                        name: Temperature
-                        unit: C
-                        pow10multi: -2
-                      - id: 2
-                        name: Pressure
-                        unit: Pa
-                        pow10multi: -2
-                      - id: 3
-                        name: Battery Level
-                        unit: '%'
-                        pow10multi: 0
-      description: Get all sensor types
-      operationId: get-api-v1-sensor-types
-  /api/v1/sensors:
-    get:
-      summary: Get all sensors
+                      "$ref": "#/components/schemas/picture"
+                  next_cursor:
+                    "$ref": "#/components/schemas/next_cursor"
+                required:
+                - sensor
+                - pictures
+                - next_cursor
+                additionalProperties: false
+    post:
+      summary: Upload a picture
       tags:
-        - Sensors
+      - Pictures
+      description: Device token, for a sensor of that device only. JPEG or PNG, up
+        to 5 MB. The file is stored under a server generated name.
+      security:
+      - deviceToken: []
+      parameters: []
       responses:
-        '200':
-          description: sensors  found
+        '201':
+          description: picture stored
           content:
             application/json:
+              example:
+                id: 50
+                date_time: '2026-09-30T12:00:00.000Z'
+                sensor_uuid: 123-123-000-005
+                size: 28
+                url: "/api/v1/pictures/50/file"
+              schema:
+                "$ref": "#/components/schemas/picture"
+        '422':
+          description: not a JPEG/PNG image, or too large
+          content:
+            application/json:
+              example:
+                error:
+                  code: validation_failed
+                  message: Validation failed
+                  details:
+                    image:
+                    - file is not a JPEG or PNG image
+                    - can't be blank
+              schema:
+                "$ref": "#/components/schemas/error"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG or PNG, up to 5 MB
+                date_time:
+                  type: string
+                  format: date-time
+                  description: Capture time, defaults to the server time
+              required:
+              - file
+        required: true
+  "/api/v1/pictures/{id}/file":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    get:
+      summary: Download a picture
+      tags:
+      - Pictures
+      description: API key with scope read or admin.
+      responses:
+        '200':
+          description: the image file
+        '404':
+          description: unknown picture
+          content:
+            application/json:
+              example:
+                error:
+                  code: not_found
+                  message: Picture not found
+              schema:
+                "$ref": "#/components/schemas/error"
+            image/jpeg:
+              schema:
+                "$ref": "#/components/schemas/error"
+            image/png:
+              schema:
+                "$ref": "#/components/schemas/error"
+  "/api/v1/sensors/{sensor_uuid}/readings":
+    parameters:
+    - name: sensor_uuid
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      summary: List the readings of a sensor, newest first
+      tags:
+      - Readings
+      description: 'API key with scope read or admin. Paginated: pass next_cursor
+        as cursor for the next page.'
+      parameters:
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+        description: Only readings with date_time >= from
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+        description: Only readings with date_time < to
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 100
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: a page of readings
+          content:
+            application/json:
+              example:
+                sensor:
+                  uuid: 123-123-000-001
+                  name: Temperature Sensor
+                  description:
+                  device_uuid: 123-123-000-000
+                  sensor_type:
+                    id: 581
+                    name: Temperature
+                    unit: C
+                    pow10multi: -2
+                readings:
+                - id: 142
+                  value: 2102
+                  date_time: '2026-09-30T12:02:00.000Z'
+                - id: 141
+                  value: 2101
+                  date_time: '2026-09-30T12:01:00.000Z'
+                next_cursor: MjAyNi0wOS0zMFQxMjowMTowMC4wMDAwMDBafDE0MQ
+              schema:
+                type: object
+                properties:
+                  sensor:
+                    "$ref": "#/components/schemas/sensor"
+                  readings:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/reading"
+                  next_cursor:
+                    "$ref": "#/components/schemas/next_cursor"
+                required:
+                - sensor
+                - readings
+                - next_cursor
+                additionalProperties: false
+        '400':
+          description: invalid query parameter
+          content:
+            application/json:
+              example:
+                error:
+                  code: bad_request
+                  message: cursor is invalid
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: unknown sensor
+          content:
+            application/json:
+              example:
+                error:
+                  code: not_found
+                  message: Sensor not found
+              schema:
+                "$ref": "#/components/schemas/error"
+    post:
+      summary: Add a reading
+      tags:
+      - Readings
+      description: Device token, for a sensor of that device only. Prefer POST /api/v1/readings
+        to send several readings at once.
+      security:
+      - deviceToken: []
+      parameters: []
+      responses:
+        '201':
+          description: reading created
+          content:
+            application/json:
+              example:
+                id: 149
+                value: 2150
+                date_time: '2026-09-30T12:00:00.000Z'
+                sensor_uuid: 123-123-000-001
+              schema:
+                "$ref": "#/components/schemas/reading"
+        '404':
+          description: unknown sensor, or a sensor of another device
+          content:
+            application/json:
+              example:
+                error:
+                  code: not_found
+                  message: Sensor not found
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: invalid reading
+          content:
+            application/json:
+              example:
+                error:
+                  code: validation_failed
+                  message: Validation failed
+                  details:
+                    date_time:
+                    - must be after 2000, the device clock is probably not set
+                    value:
+                    - must be an integer
+              schema:
+                "$ref": "#/components/schemas/error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  type: integer
+                  example: 2150
+                  description: Raw integer value, see sensor_type.pow10multi
+                date_time:
+                  type: string
+                  format: date-time
+                  description: Measurement time, defaults to the server time
+              required:
+              - value
+  "/api/v1/readings":
+    post:
+      summary: Add readings for several sensors at once
+      tags:
+      - Readings
+      description: 'Device token. One request per measurement cycle (up to 100 readings),
+        for sensors of that device. All or nothing: if one reading is invalid, none
+        is stored.'
+      security:
+      - deviceToken: []
+      parameters: []
+      responses:
+        '201':
+          description: readings created
+          content:
+            application/json:
+              example:
+                readings:
+                - id: 150
+                  value: 2150
+                  date_time: '2026-09-30T12:00:00.000Z'
+                  sensor_uuid: 123-123-000-001
+                - id: 151
+                  value: 4520
+                  date_time: '2026-09-30T12:00:00.000Z'
+                  sensor_uuid: 123-123-000-003
+              schema:
+                type: object
+                properties:
+                  readings:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/reading"
+                required:
+                - readings
+                additionalProperties: false
+        '422':
+          description: at least one invalid reading, nothing stored
+          content:
+            application/json:
+              example:
+                error:
+                  code: validation_failed
+                  message: Validation failed
+                  details:
+                    readings[1].value:
+                    - is not a number
+              schema:
+                "$ref": "#/components/schemas/error"
+        '400':
+          description: missing or empty readings list
+          content:
+            application/json:
+              example:
+                error:
+                  code: bad_request
+                  message: 'param is missing or the value is empty or invalid: readings'
+              schema:
+                "$ref": "#/components/schemas/error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                readings:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    properties:
+                      sensor_uuid:
+                        type: string
+                      value:
+                        type: integer
+                        example: 2150
+                        description: Raw integer value, see sensor_type.pow10multi
+                      date_time:
+                        type: string
+                        format: date-time
+                        description: Measurement time, defaults to the server time
+                    required:
+                    - sensor_uuid
+                    - value
+              required:
+              - readings
+  "/api/v1/devices/{device_uuid}/sensors":
+    parameters:
+    - name: device_uuid
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      summary: List the sensors of a device
+      tags:
+      - Sensors
+      responses:
+        '200':
+          description: sensors
+          content:
+            application/json:
+              example:
+                sensors:
+                - uuid: 123-123-000-001
+                  name: Temperature Sensor
+                  description:
+                  device_uuid: 123-123-000-000
+                  sensor_type:
+                    id: 590
+                    name: Temperature
+                    unit: C
+                    pow10multi: -2
               schema:
                 type: object
                 properties:
                   sensors:
                     type: array
-                    maxItems: 100
                     items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        uuid:
-                          type: string
-                          maxLength: 10
-                          pattern: ^[A-Za-z0-9]{3,10}$
-                        name:
-                          type: string
-                          maxLength: 256
-                          pattern: ^[A-Za-z0-9 ]*$
-                        description:
-                          type: string
-                          maxLength: 256
-                          pattern: ^[A-Za-z0-9 ]*$        
-                        sensor_type:
-                          type: object
-                          properties:
-                            id:
-                              type: integer
-                            name:
-                              type: string
-                              maxLength: 256
-                              pattern: ^[A-Za-z0-9 ]*$       
-                            unit:
-                              type: string
-                              maxLength: 256
-                              pattern: ^[A-Za-z0-9 ]*$     
-                            pow10multi:
-                              type: integer
-              examples:
-                example-1:
-                  value:
-                    sensors:
-                      - id: 1
-                        uuid: 123-123-000-001
-                        name: Temperature Sensor
-                        description: Temperature Sensor
-                        sensor_type:
-                          id: 1
-                          name: Temperature
-                          unit: C
-                          pow10multi: -2
-                      - id: 2
-                        uuid: 123-123-000-002
-                        name: Pressure Sensor
-                        description: Pressure Sensor
-                        sensor_type:
-                          id: 2
-                          name: Pressure
-                          unit: Pa
-                          pow10multi: -2
-                      - id: 3
-                        uuid: 123-123-000-003
-                        name: Battery Level Sensor
-                        description: Battery Level Sensor
-                        sensor_type:
-                          id: 3
-                          name: Battery Level
-                          unit: '%'
-                          pow10multi: 0
-      operationId: get-api-v1-sensors
-      description: Get all sensors
-      parameters:
-        - schema:
-            type: string
-            maxLength: 256
-            pattern: ^[A-Za-z0-9 ]*$
-          in: query
-          name: device_uuid
-          required: true
+                      "$ref": "#/components/schemas/sensor"
+                required:
+                - sensors
+                additionalProperties: false
+        '404':
+          description: unknown device
+          content:
+            application/json:
+              example:
+                error:
+                  code: not_found
+                  message: Device not found
+              schema:
+                "$ref": "#/components/schemas/error"
     post:
-      summary: Create a sensor
+      summary: Add a sensor to a device
       tags:
-        - Sensors
-      operationId: post-api-v1-sensors
-      security:
-        - apiKey: []
+      - Sensors
+      description: API key with scope admin.
+      parameters: []
       responses:
-        '200':
-          description: OK
+        '201':
+          description: sensor created
           content:
             application/json:
+              example:
+                uuid: 123-123-000-002
+                name: Pressure Sensor
+                description:
+                device_uuid: 123-123-000-000
+                sensor_type:
+                  id: 592
+                  name: Temperature
+                  unit: C
+                  pow10multi: -2
               schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  uuid:
-                    type: string
-                    maxLength: 10
-                    pattern: ^[A-Za-z0-9]{3,10}$
-                  name:
-                    type: string
-                    maxLength: 256
-                    pattern: ^[A-Za-z0-9 ]*$     
-                  description:
-                    type: string
-                    maxLength: 256
-                    pattern: ^[A-Za-z0-9 ]*$     
-                  created_at:
-                    type: string
-                  updated_at:
-                    type: string
-                  device_id:
-                    type: integer
-                  sensor_type_id:
-                    type: integer
-              examples:
-                example-1:
-                  value:
-                    id: 4
-                    uuid: 123-123-000-008
-                    name: test
-                    description: test creation
-                    created_at: '2020-10-18T12:09:16.050Z'
-                    updated_at: '2020-10-18T12:09:16.050Z'
-                    device_id: 1
-                    sensor_type_id: 1
-        '400':
-          description: Error see message
+                "$ref": "#/components/schemas/sensor"
+        '422':
+          description: invalid sensor (e.g. unknown sensor type)
           content:
             application/json:
+              example:
+                error:
+                  code: validation_failed
+                  message: Validation failed
+                  details:
+                    sensor_type:
+                    - must exist
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    maxLength: 256
-                    pattern: ^[A-Za-z0-9 ]*$
-              examples:
-                example-1:
-                  value:
-                    message: 'Error: duplicate sensor uuid'
+                "$ref": "#/components/schemas/error"
       requestBody:
         content:
           application/json:
             schema:
               type: object
               properties:
-                device_id:
-                  type: integer
-                sensor_type_id:
-                  type: integer
                 uuid:
                   type: string
-                  maxLength: 10
-                  pattern: ^[A-Za-z0-9]{3,10}$
+                  example: 123-123-000-002
                 name:
                   type: string
-                  maxLength: 256
-                  pattern: ^[A-Za-z0-9 ]*$     
+                  example: Pressure Sensor
                 description:
                   type: string
-                  maxLength: 256
-                  pattern: ^[A-Za-z0-9 ]*$     
-              required:
-                - device_id
-                - sensor_type_id
-                - uuid
-                - name
-                - description
-            examples:
-              example-1:
-                value:
-                  device_id: 1
-                  sensor_type_id: 1
-                  uuid: 123-123-000-008
-                  name: test
-                  description: test creation
-      description: Create a new sensor for an existing device
-  /api/v1/sensor_readings:
-    get:
-      tags:
-        - Sensor readings
-      summary: Get all sensor readings
-      description: Get sensor readings
-      operationId: get-api-v1-sensor-readings
-      responses:
-        '200':
-          description: sensor readings  found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  sensor_readings:
-                    type: array
-                    maxItems: 100
-                    items:
-                      type: object
-                      properties:
-                        sensor:
-                          type: object
-                          properties:
-                            id:
-                              type: integer
-                            uuid:
-                              type: string
-                              maxLength: 10
-                              pattern: ^[A-Za-z0-9]{3,10}$
-                            name:
-                              type: string
-                              maxLength: 256
-                              pattern: ^[A-Za-z0-9 ]*$     
-                            sensor_type:
-                              type: object
-                              properties:
-                                id:
-                                  type: integer
-                                name:
-                                  type: string
-                                  maxLength: 256
-                                  pattern: ^[A-Za-z0-9 ]*$     
-                                unit:
-                                  type: string
-                                  maxLength: 256
-                                  pattern: ^[A-Za-z0-9 ]*$
-                                pow10multi:
-                                  type: integer
-                        sensor_value:
-                          type: integer
-                        date_time:
-                          type: string
-              examples:
-                example-1:
-                  value:
-                    sensor_readings:
-                      - sensor:
-                          id: 1
-                          uuid: 123-123-000-001
-                          name: Temperature Sensor
-                          sensor_type:
-                            id: 1
-                            name: Temperature
-                            unit: C
-                            pow10multi: -2
-                        sensor_value: 100
-                        date_time: '2020-10-31T07:46:00.000Z'
-                      - sensor:
-                          id: 1
-                          uuid: 123-123-000-001
-                          name: Temperature Sensor
-                          sensor_type:
-                            id: 1
-                            name: Temperature
-                            unit: C
-                            pow10multi: -2
-                        sensor_value: 102300
-                        date_time: '2020-10-31T14:12:31.367Z'
-                      - sensor:
-                          id: 1
-                          uuid: 123-123-000-001
-                          name: Temperature Sensor
-                          sensor_type:
-                            id: 1
-                            name: Temperature
-                            unit: C
-                            pow10multi: -2
-                        sensor_value: 102300
-                        date_time: '2020-10-31T14:13:32.557Z'
-                      - sensor:
-                          id: 1
-                          uuid: 123-123-000-001
-                          name: Temperature Sensor
-                          sensor_type:
-                            id: 1
-                            name: Temperature
-                            unit: C
-                            pow10multi: -2
-                        sensor_value: 102300
-                        date_time: '2020-10-01T14:12:31.367Z'
-                      - sensor:
-                          id: 1
-                          uuid: 123-123-000-001
-                          name: Temperature Sensor
-                          sensor_type:
-                            id: 1
-                            name: Temperature
-                            unit: C
-                            pow10multi: -2
-                        sensor_value: 102300
-                        date_time: '2020-10-01T14:12:31.367Z'
-                      - sensor:
-                          id: 1
-                          uuid: 123-123-000-001
-                          name: Temperature Sensor
-                          sensor_type:
-                            id: 1
-                            name: Temperature
-                            unit: C
-                            pow10multi: -2
-                        sensor_value: 102300
-                        date_time: '2020-10-01T14:12:31.367Z'
-                      - sensor:
-                          id: 1
-                          uuid: 123-123-000-001
-                          name: Temperature Sensor
-                          sensor_type:
-                            id: 1
-                            name: Temperature
-                            unit: C
-                            pow10multi: -2
-                        sensor_value: 102300
-                        date_time: '2020-10-01T14:12:31.367Z'
-                      - sensor:
-                          id: 1
-                          uuid: 123-123-000-001
-                          name: Temperature Sensor
-                          sensor_type:
-                            id: 1
-                            name: Temperature
-                            unit: C
-                            pow10multi: -2
-                        sensor_value: 102300
-                        date_time: '2020-10-01T14:12:31.367Z'
-        '400':
-          description: Error see message
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    maxLength: 256
-                    pattern: ^[A-Za-z0-9 ]*$
-              examples:
-                example-1:
-                  value:
-                    message: 'Error: sensor not found'
-      parameters:
-        - schema:
-            type: string
-            maxLength: 256
-            pattern: ^[A-Za-z0-9 ]*$
-          in: query
-          name: sensor_uuid
-          required: true
-    post:
-      tags:
-        - Sensor readings
-      summary: Add a new reading for a sensor
-      description: And sensor reading in back end database
-      operationId: post-api-v1-sensor-readings
-      security:
-        - deviceToken: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                sensor_uuid:
-                  type: string
-                  maxLength: 10
-                  pattern: ^[A-Za-z0-9]{3,10}$                  
-                sensor_value:
+                sensor_type_id:
                   type: integer
-                sensor_date_time:
-                  type: string
-                  maxLength: 25
-                  pattern: ˆ[1-9][0-9]{3}\-[0-1]?[1-9]\-[0-3]?[0-9]+T.+[\.][0-9]+(Z|[\+\-].+)
+                  description: See GET /api/v1/sensor_types
               required:
-                - sensor_uuid
-                - sensor_value
-                - sensor_date_time
-            examples:
-              example-1:
-                value:
-                  sensor_uuid: 123-123-000-001
-                  sensor_value: 102300
-                  sensor_date_time: '2020-10-01T14:12:31.367Z'
-          application/xml:
-            schema:
-              type: object
-              properties: {}
-        description: ''
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  sensor_value:
-                    type: integer
-                  created_at:
-                    type: string
-                  updated_at:
-                    type: string
-                  sensor_id:
-                    type: integer
-              examples:
-                example-1:
-                  value:
-                    id: 133
-                    sensorvalue: 102300
-                    created_at: '2020-10-18T11:48:57.924Z'
-                    updated_at: '2020-10-18T11:48:57.924Z'
-                    sensor_id: 2
-        '400':
-          description: Impossible to create
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-              examples:
-                example-1:
-                  value: {}
-  /api/v1/date_time/current_date_time.json:
+              - uuid
+              - name
+              - sensor_type_id
+  "/api/v1/sensors/{uuid}":
+    parameters:
+    - name: uuid
+      in: path
+      required: true
+      schema:
+        type: string
     get:
-      summary: Get current date time
+      summary: Show a sensor
       tags:
-        - DateTime
+      - Sensors
       responses:
         '200':
-          description: OK
+          description: sensor
           content:
             application/json:
+              example:
+                uuid: 123-123-000-001
+                name: Temperature Sensor
+                description:
+                device_uuid: 123-123-000-000
+                sensor_type:
+                  id: 594
+                  name: Temperature
+                  unit: C
+                  pow10multi: -2
               schema:
-                description: ''
+                "$ref": "#/components/schemas/sensor"
+  "/api/v1/sensor_types":
+    get:
+      summary: List sensor types
+      tags:
+      - Sensor types
+      responses:
+        '200':
+          description: sensor types
+          content:
+            application/json:
+              example:
+                sensor_types:
+                - id: 595
+                  name: Temperature
+                  unit: C
+                  pow10multi: -2
+              schema:
+                type: object
+                properties:
+                  sensor_types:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/sensor_type"
+                required:
+                - sensor_types
+                additionalProperties: false
+  "/api/v1/time":
+    get:
+      summary: Current server time
+      tags:
+      - Time
+      description: Public (no token). Lets a device set its clock before posting readings.
+      security: []
+      responses:
+        '200':
+          description: current time
+          content:
+            application/json:
+              example:
+                current_date_time: '2026-09-30T18:00:59.314Z'
+                epoch: 1790791259
+              schema:
                 type: object
                 properties:
                   current_date_time:
                     type: string
-                    maxLength: 50
-                    pattern: ˆ[1-9][0-9]{3}\-[0-1]?[1-9]\-[0-3]?[0-9]+T.+[\.][0-9]+(Z|[\+\-].+)
-              examples:
-                example-1:
-                  value:
-                    current_date_time: '2020-11-03T11:05:30.001Z'
-      operationId: get-api-v1-date_time-current_date_time.json
-      security: []
-      description: Get current date time
-
+                    format: date-time
+                  epoch:
+                    type: integer
+                    description: Unix time in seconds
+                required:
+                - current_date_time
+                - epoch
+                additionalProperties: false
+components:
+  securitySchemes:
+    deviceToken:
+      type: http
+      scheme: bearer
+      description: Device token (esd_...). Lets a device post readings and pictures
+        for its own sensors only.
+    apiKey:
+      type: http
+      scheme: bearer
+      description: 'API key (esk_...). Scope read: GET endpoints. Scope admin: also
+        creates devices and sensors.'
+  schemas:
+    error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: validation_failed
+            message:
+              type: string
+              example: Validation failed
+            details:
+              type: object
+              description: Field name => list of messages (validation errors only)
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+          required:
+          - code
+          - message
+          additionalProperties: false
+      required:
+      - error
+      additionalProperties: false
+    sensor_type:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Temperature
+        unit:
+          type: string
+          example: C
+        pow10multi:
+          type: integer
+          description: Real value = value * 10^pow10multi
+          example: -2
+      required:
+      - id
+      - name
+      - unit
+      - pow10multi
+      additionalProperties: false
+    sensor:
+      type: object
+      properties:
+        uuid:
+          type: string
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"
+          example: 123-123-000-001
+        name:
+          type: string
+          example: Temperature Sensor
+        description:
+          type: string
+          nullable: true
+        device_uuid:
+          type: string
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"
+          example: 123-123-000-001
+        sensor_type:
+          "$ref": "#/components/schemas/sensor_type"
+      required:
+      - uuid
+      - name
+      - description
+      - device_uuid
+      - sensor_type
+      additionalProperties: false
+    device:
+      type: object
+      properties:
+        uuid:
+          type: string
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"
+          example: 123-123-000-001
+        name:
+          type: string
+          example: MKR1010 BME280
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-09-30T12:00:00.000Z'
+        sensors:
+          type: array
+          items:
+            "$ref": "#/components/schemas/sensor"
+      required:
+      - uuid
+      - name
+      - description
+      - created_at
+      - sensors
+      additionalProperties: false
+    device_with_token:
+      type: object
+      description: A device just created, with its device token (shown only once)
+      properties:
+        uuid:
+          type: string
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"
+          example: 123-123-000-001
+        name:
+          type: string
+          example: MKR1010 BME280
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-09-30T12:00:00.000Z'
+        sensors:
+          type: array
+          items:
+            "$ref": "#/components/schemas/sensor"
+        api_token:
+          type: string
+          example: esd_...
+      required:
+      - uuid
+      - name
+      - description
+      - created_at
+      - sensors
+      - api_token
+      additionalProperties: false
+    reading:
+      type: object
+      properties:
+        id:
+          type: integer
+        value:
+          type: integer
+          description: Raw integer value, see sensor_type.pow10multi
+          example: 2150
+        date_time:
+          type: string
+          format: date-time
+          example: '2026-09-30T12:00:00.000Z'
+        sensor_uuid:
+          type: string
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"
+          example: 123-123-000-001
+      required:
+      - id
+      - value
+      - date_time
+      additionalProperties: false
+    picture:
+      type: object
+      properties:
+        id:
+          type: integer
+        date_time:
+          type: string
+          format: date-time
+          example: '2026-09-30T12:00:00.000Z'
+        sensor_uuid:
+          type: string
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"
+          example: 123-123-000-001
+        size:
+          type: integer
+          description: File size in bytes
+        url:
+          type: string
+          example: "/api/v1/pictures/1/file"
+      required:
+      - id
+      - date_time
+      - sensor_uuid
+      - size
+      - url
+      additionalProperties: false
+    next_cursor:
+      type: string
+      nullable: true
+      description: Pass as cursor to get the next page; null on the last page

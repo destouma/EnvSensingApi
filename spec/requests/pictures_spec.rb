@@ -28,136 +28,155 @@ RSpec.describe 'Pictures API', type: :request do
     Rack::Test::UploadedFile.new(file, 'image/jpeg', true, original_filename: name)
   end
 
-  describe 'POST /api/v1/pictures' do
-    it 'rejects a file name that escapes the storage directory' do
-      post '/api/v1/pictures.json', params: { sensor_uuid: sensor.uuid, file_name: '../../../../etc/passwd' },
-                                    headers: device_headers
+  def upload(name, content, headers: device_headers, sensor_uuid: sensor.uuid, **params)
+    post "/api/v1/sensors/#{sensor_uuid}/pictures", params: { file: uploaded(name, content), **params }, headers: headers
+  end
 
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(Picture.count).to eq(0)
-    end
+  def stored_files
+    storage_dir.glob('**/*').select(&:file?)
+  end
 
-    it 'rejects a non-image extension' do
-      post '/api/v1/pictures.json', params: { sensor_uuid: sensor.uuid, file_name: 'shell.php' }, headers: device_headers
+  describe 'POST /api/v1/sensors/:uuid/pictures' do
+    it "stores a JPEG under a server generated name in the device's directory" do
+      upload('flower.jpg', jpeg_bytes, date_time: '2022-03-18T12:00:00Z')
 
-      expect(response).to have_http_status(:unprocessable_content)
-    end
-
-    it 'stores a valid picture with the given picture_date_time' do
-      post '/api/v1/pictures.json',
-           params: { sensor_uuid: sensor.uuid, file_name: 'flower.jpg', picture_date_time: '2022-03-18T12:00:00Z' },
-           headers: device_headers
-
-      expect(response).to have_http_status(:no_content)
+      expect(response).to have_http_status(:created)
       picture = Picture.last
-      expect(picture.file_name).to eq('flower.jpg')
-      expect(picture.file_url).to be_nil
+      expect(picture.file_name).to match(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\.jpg\z/)
+      expect(File.binread(device_dir.join(picture.file_name))).to eq(jpeg_bytes)
       expect(picture.date_time).to eq(Time.utc(2022, 3, 18, 12))
+      expect(response.parsed_body).to include('id' => picture.id, 'sensor_uuid' => sensor.uuid,
+                                              'size' => jpeg_bytes.bytesize, 'url' => "/api/v1/pictures/#{picture.id}/file")
     end
 
-    it 'still accepts the legacy sensor_date_time parameter' do
-      post '/api/v1/pictures.json',
-           params: { sensor_uuid: sensor.uuid, file_name: 'flower.jpg', sensor_date_time: '2022-03-18T12:00:00Z' },
-           headers: device_headers
+    it 'ignores a client file name that tries to escape the storage directory' do
+      upload('../../../../etc/passwd.jpg', jpeg_bytes)
 
-      expect(Picture.last.date_time).to eq(Time.utc(2022, 3, 18, 12))
+      expect(response).to have_http_status(:created)
+      expect(stored_files.map(&:dirname)).to eq([device_dir])
     end
 
-    it "rejects a picture for another device's sensor" do
+    it 'never overwrites an existing picture, even with the same client file name' do
+      upload('flower.jpg', jpeg_bytes)
+      upload('flower.jpg', png_bytes)
+
+      expect(Picture.count).to eq(2)
+      expect(stored_files.map { |f| File.binread(f) }).to contain_exactly(jpeg_bytes, png_bytes)
+    end
+
+    it "cannot add a picture to another device's sensor" do
       other_device = Device.create!(uuid: 'dev-2', name: 'Other')
-      other_sensor = Sensor.create!(uuid: 'sensor-2', name: 'Camera', device: other_device, sensor_type: sensor_type)
+      Sensor.create!(uuid: 'sensor-2', name: 'Camera', device: other_device, sensor_type: sensor_type)
 
-      post '/api/v1/pictures.json', params: { sensor_uuid: other_sensor.uuid, file_name: 'flower.jpg' },
-                                    headers: device_headers
+      upload('flower.jpg', jpeg_bytes, sensor_uuid: 'sensor-2')
+
+      expect(response).to have_http_status(:not_found)
+      expect(Picture.count).to eq(0)
+      expect(stored_files).to be_empty
+    end
+
+    it 'rejects a non-image extension even with image content' do
+      upload('shell.php', jpeg_bytes)
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body.dig('error', 'details', 'image')).to be_present
+      expect(stored_files).to be_empty
+    end
+
+    it 'rejects content that is not an image' do
+      upload('fake.jpg', '<script>alert(1)</script>')
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(stored_files).to be_empty
+    end
+
+    it 'rejects files larger than 5 MB' do
+      upload('big.jpg', jpeg_bytes + ('0' * 5.megabytes))
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(stored_files).to be_empty
+    end
+
+    it 'rejects a file parameter that is not an upload (a string would be read as a server path)' do
+      post "/api/v1/sensors/#{sensor.uuid}/pictures", params: { file: '/etc/hostname' }, headers: device_headers
 
       expect(response).to have_http_status(:bad_request)
-      expect(Picture.count).to eq(0)
+      expect(stored_files).to be_empty
+    end
+
+    it 'rejects a request without a file' do
+      post "/api/v1/sensors/#{sensor.uuid}/pictures", params: {}, headers: device_headers
+
+      expect(response).to have_http_status(:bad_request)
+    end
+
+    it 'rejects an invalid date_time' do
+      upload('flower.jpg', jpeg_bytes, date_time: 'yesterday')
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body.dig('error', 'details', 'date_time')).to be_present
+    end
+
+    it 'leaves no cached copy in public/' do
+      upload('flower.jpg', jpeg_bytes)
+
+      expect(Rails.root.join('public/uploads')).not_to exist
     end
   end
 
-  describe 'GET /api/v1/pictures/file' do
+  describe 'GET /api/v1/pictures/:id/file' do
     it 'serves a stored picture' do
-      File.binwrite(device_dir.join('flower.jpg'), jpeg_bytes)
-      picture = Picture.create!(sensor: sensor, file_name: 'flower.jpg')
+      upload('flower.jpg', jpeg_bytes)
 
-      get '/api/v1/pictures/file.json', params: { id: picture.id }, headers: read_headers
+      get "/api/v1/pictures/#{Picture.last.id}/file", headers: read_headers
 
       expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq('image/jpeg')
       expect(response.body.b).to eq(jpeg_bytes)
     end
 
     it 'does not serve a legacy row whose file name escapes the storage directory' do
-      picture = Picture.create!(sensor: sensor, file_name: 'flower.jpg')
-      picture.update_columns(file_name: '../../../../etc/passwd', file_url: '/etc/passwd')
+      upload('flower.jpg', jpeg_bytes)
+      picture = Picture.last
+      picture.update_columns(file_name: '../../../../etc/passwd')
 
-      get '/api/v1/pictures/file.json', params: { id: picture.id }, headers: read_headers
+      get "/api/v1/pictures/#{picture.id}/file", headers: read_headers
 
       expect(response).to have_http_status(:not_found)
       expect(response.body).not_to include('root:')
     end
 
     it 'does not follow a symlink that points outside the storage directory' do
+      upload('flower.jpg', jpeg_bytes)
+      picture = Picture.last
       File.symlink('/etc/passwd', device_dir.join('link.jpg'))
-      picture = Picture.create!(sensor: sensor, file_name: 'link.jpg')
+      picture.update_columns(file_name: 'link.jpg')
 
-      get '/api/v1/pictures/file.json', params: { id: picture.id }, headers: read_headers
+      get "/api/v1/pictures/#{picture.id}/file", headers: read_headers
 
       expect(response).to have_http_status(:not_found)
     end
-  end
 
-  describe 'POST /api/v1/pictures/upload' do
-    it "stores a JPEG image in the device's directory" do
-      post '/api/v1/pictures/upload.json', params: { file: uploaded('flower.jpg', jpeg_bytes) }, headers: device_headers
+    it 'returns 404 for an unknown picture' do
+      get '/api/v1/pictures/999999/file', headers: read_headers
 
-      expect(response).to have_http_status(:no_content)
-      expect(File.binread(device_dir.join('flower.jpg'))).to eq(jpeg_bytes)
-    end
-
-    it "cannot overwrite another device's picture" do
-      other_device = Device.create!(uuid: 'dev-2', name: 'Other')
-      File.binwrite(device_dir.join('flower.jpg'), jpeg_bytes)
-
-      post '/api/v1/pictures/upload.json', params: { file: uploaded('flower.jpg', png_bytes) },
-                                           headers: bearer(other_device.device_tokens.create!.token)
-
-      expect(response).to have_http_status(:no_content)
-      expect(File.binread(device_dir.join('flower.jpg'))).to eq(jpeg_bytes)
-      expect(File.binread(storage_dir.join(other_device.id.to_s, 'flower.jpg'))).to eq(png_bytes)
-    end
-
-    it 'rejects a disallowed extension even with image content' do
-      post '/api/v1/pictures/upload.json', params: { file: uploaded('page.html', jpeg_bytes) }, headers: device_headers
-
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(storage_dir.glob('**/*.*')).to be_empty
-    end
-
-    it 'rejects content that is not an image' do
-      post '/api/v1/pictures/upload.json', params: { file: uploaded('fake.jpg', '<script>alert(1)</script>') },
-                                           headers: device_headers
-
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(storage_dir.glob('**/*.*')).to be_empty
-    end
-
-    it 'rejects files larger than 5 MB' do
-      post '/api/v1/pictures/upload.json', params: { file: uploaded('big.jpg', jpeg_bytes + ('0' * 5.megabytes)) },
-                                           headers: device_headers
-
-      expect(response).to have_http_status(:unprocessable_content)
+      expect(response).to have_http_status(:not_found)
+      expect(response.parsed_body.dig('error', 'code')).to eq('not_found')
     end
   end
 
-  describe 'GET /api/v1/pictures' do
-    it 'returns the sensor and a download path instead of the server file path' do
-      picture = Picture.create!(sensor: sensor, file_name: 'flower.jpg')
+  describe 'GET /api/v1/sensors/:uuid/pictures' do
+    it 'returns the sensor and download paths, never server file paths' do
+      upload('flower.jpg', jpeg_bytes)
 
-      get '/api/v1/pictures.json', params: { sensor_uuid: sensor.uuid }, headers: read_headers
+      get "/api/v1/sensors/#{sensor.uuid}/pictures", headers: read_headers
 
-      entry = JSON.parse(response.body)['pictures'].first
-      expect(entry['sensor']['uuid']).to eq(sensor.uuid)
-      expect(entry['picture_file_url']).to eq("/api/v1/pictures/file?id=#{picture.id}")
+      expect(response).to have_http_status(:ok)
+      body = response.parsed_body
+      expect(body['sensor']['uuid']).to eq(sensor.uuid)
+      expect(body['pictures'].sole['url']).to eq("/api/v1/pictures/#{Picture.last.id}/file")
+      expect(response.body).not_to include(storage_dir.to_s)
+      expect(body['next_cursor']).to be_nil
     end
   end
 end

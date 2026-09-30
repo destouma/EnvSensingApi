@@ -5,7 +5,6 @@
 #  id         :bigint           not null, primary key
 #  date_time  :datetime
 #  file_name  :string
-#  file_url   :string
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
 #  sensor_id  :bigint           not null

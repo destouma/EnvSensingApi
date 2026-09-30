@@ -14,6 +14,11 @@
 #  index_devices_on_uuid  (uuid) UNIQUE
 #
 class Device < ApplicationRecord
-  has_many :sensors
+  include PublicUuid
+
+  has_many :sensors, dependent: :restrict_with_error
   has_many :device_tokens, dependent: :destroy
+
+  validates :name, presence: true, length: { maximum: 255 }
+  validates :description, length: { maximum: 2000 }
 end

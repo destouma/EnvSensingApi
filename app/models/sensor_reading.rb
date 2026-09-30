@@ -18,5 +18,15 @@
 #  fk_rails_...  (sensor_id => sensors.id)
 #
 class SensorReading < ApplicationRecord
+  include DeviceDateTime
+
+  # sensorvalue is a 4-byte integer column
+  VALUE_RANGE = (-2**31)..(2**31 - 1)
+
+  # The API calls it "value"
+  alias_attribute :value, :sensorvalue
+
   belongs_to :sensor
+
+  validates :value, presence: true, numericality: { only_integer: true, in: VALUE_RANGE }
 end

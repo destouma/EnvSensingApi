@@ -74,7 +74,7 @@ The server will listen port 8080.
 Authentication:
 ============
 
-Every API endpoint except `GET /api/v1/date_time/current_date_time` requires an
+Every API endpoint except `GET /api/v1/time` requires an
 `Authorization: Bearer <token>` header. There are two kinds of tokens, both shown only once
 when created and stored as SHA-256 digests:
 
@@ -103,4 +103,48 @@ Tokens can also be revoked from Rails Admin (set `revoked_at`).
 Requests are rate limited (429 with `Retry-After`): 300 requests per 5 minutes per token and
 1000 per 5 minutes per IP address.
 
-Pictures are stored per device in `storage/pictures/<device id>/`.
+Pictures are stored per device in `storage/pictures/<device id>/`, under server generated file names.
+
+API:
+============
+
+Full reference with request/response examples: `/api-docs` (generated from the specs in
+`spec/integration`, regenerate with `RAILS_ENV=test bin/rails rswag:specs:swaggerize`).
+All paths start with `/api/v1`.
+
+| Endpoint | Token | |
+|---|---|---|
+| `GET /time` | none | `{current_date_time, epoch}` |
+| `GET /devices`, `GET /devices/:uuid` | read | devices with their sensors |
+| `POST /devices` | admin | `{uuid, name, description}` → 201 with the device `api_token` |
+| `GET /devices/:uuid/sensors`, `GET /sensors/:uuid` | read | |
+| `POST /devices/:uuid/sensors` | admin | `{uuid, name, description, sensor_type_id}` → 201 |
+| `GET /sensor_types` | read | |
+| `GET /sensors/:uuid/readings` | read | newest first, `from`, `to`, `limit`, `cursor` |
+| `POST /sensors/:uuid/readings` | device | `{value, date_time}` → 201 |
+| `POST /readings` | device | `{readings: [{sensor_uuid, value, date_time}, ...]}` (1-100) → 201, all or nothing |
+| `GET /sensors/:uuid/pictures` | read | newest first, same pagination as readings |
+| `POST /sensors/:uuid/pictures` | device | multipart `file` (JPEG/PNG, 5 MB max) and optional `date_time` → 201 |
+| `GET /pictures/:id/file` | read | the image |
+
+- `value` is the raw integer reading: real value = `value * 10^pow10multi` of the sensor type.
+- `date_time` (ISO 8601) is optional and defaults to the server time. It must be after 2000 and at most
+  5 minutes in the future, so a device with an unset clock gets a 422 instead of storing wrong data.
+- Pagination: pass the `next_cursor` of a page as `cursor` to get the next one (`null` on the last page).
+- Errors always look like `{"error": {"code": "validation_failed", "message": "...", "details": {"field": ["..."]}}}`
+  with status 400 (malformed request), 401, 403, 404 (including another device's sensor), 409, 422 or 429.
+
+Firmware migration from the previous API:
+
+| Before | Now |
+|---|---|
+| `GET /api/v1/date_time/current_date_time.json` | `GET /api/v1/time` (also returns `epoch`) |
+| `POST /api/v1/sensor_readings.json` `{sensor_uuid, sensor_value, sensor_date_time}` | `POST /api/v1/readings` `{readings: [{sensor_uuid, value, date_time}]}`, one request for all sensors |
+| `POST /api/v1/pictures/upload.json` (file) then `POST /api/v1/pictures.json` `{sensor_uuid, file_name}` | `POST /api/v1/sensors/:uuid/pictures` multipart `file`, one request |
+| `GET /api/v1/sensor_readings.json?sensor_uuid=` | `GET /api/v1/sensors/:uuid/readings` |
+| `GET /api/v1/sensors.json?device_uuid=` | `GET /api/v1/devices/:uuid/sensors` |
+| `GET /api/v1/pictures.json?sensor_uuid=`, `GET /api/v1/pictures/file.json?id=` | `GET /api/v1/sensors/:uuid/pictures`, `GET /api/v1/pictures/:id/file` |
+| `POST /api/v1/sensors.json` `{device_id, sensor_type_id, ...}` | `POST /api/v1/devices/:uuid/sensors` `{sensor_type_id, ...}` |
+| 200 on create, 400 for not found | 201 on create, 404 for not found, 422 for invalid data |
+
+All requests except `GET /api/v1/time` need the `Authorization: Bearer <token>` header.

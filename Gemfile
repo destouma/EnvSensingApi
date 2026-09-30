@@ -19,6 +19,9 @@ gem "dartsass-sprockets", "~> 3.2"
 
 gem "carrierwave", "~> 3.1"
 gem "rack-attack", "~> 6.8"
+# json 3.0 (Sept 2026) removed options that json-schema (used by rswag-specs) still passes;
+# stay on the 2.x line bundled with Ruby 4.0 until json-schema supports 3.x.
+gem "json", "~> 2.18"
 
 # API docs served at /api-docs
 gem "rswag-api", "~> 2.17"
