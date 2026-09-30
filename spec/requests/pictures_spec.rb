@@ -33,14 +33,14 @@ RSpec.describe 'Pictures API', type: :request do
       post '/api/v1/pictures.json', params: { sensor_uuid: sensor.uuid, file_name: '../../../../etc/passwd' },
                                     headers: device_headers
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(Picture.count).to eq(0)
     end
 
     it 'rejects a non-image extension' do
       post '/api/v1/pictures.json', params: { sensor_uuid: sensor.uuid, file_name: 'shell.php' }, headers: device_headers
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it 'stores a valid picture with the given picture_date_time' do
@@ -129,7 +129,7 @@ RSpec.describe 'Pictures API', type: :request do
     it 'rejects a disallowed extension even with image content' do
       post '/api/v1/pictures/upload.json', params: { file: uploaded('page.html', jpeg_bytes) }, headers: device_headers
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(storage_dir.glob('**/*.*')).to be_empty
     end
 
@@ -137,7 +137,7 @@ RSpec.describe 'Pictures API', type: :request do
       post '/api/v1/pictures/upload.json', params: { file: uploaded('fake.jpg', '<script>alert(1)</script>') },
                                            headers: device_headers
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(storage_dir.glob('**/*.*')).to be_empty
     end
 
@@ -145,7 +145,7 @@ RSpec.describe 'Pictures API', type: :request do
       post '/api/v1/pictures/upload.json', params: { file: uploaded('big.jpg', jpeg_bytes + ('0' * 5.megabytes)) },
                                            headers: device_headers
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 

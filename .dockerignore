@@ -1,10 +1,42 @@
-Dockerfile
+# See https://docs.docker.com/engine/reference/builder/#dockerignore-file for more about ignoring files.
 
-# Ignore .git folder
-.git
+# Ignore git directory.
+/.git/
+/.gitignore
 
-node_modules/
-tmp/pids/
+# Ignore bundler config.
+/.bundle
 
-# Secrets are injected at runtime, never baked into the image
-.env
+# Ignore all environment files (secrets are injected at runtime, never baked into the image).
+/.env*
+
+# Ignore all default key files.
+/config/master.key
+/config/credentials/*.key
+
+# Ignore all logfiles and tempfiles.
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+
+# Ignore pidfiles, but keep the directory.
+/tmp/pids/*
+!/tmp/pids/.keep
+
+# Ignore uploaded files and local tooling.
+/storage/*
+/node_modules/
+/.idea/
+/postman/
+/jmeter.log
+
+# Ignore precompiled assets; they are built inside the image.
+/public/assets
+
+# Ignore CI service files.
+/.github
+
+# Ignore Docker-related files
+/.dockerignore
+/docker-compose.yml

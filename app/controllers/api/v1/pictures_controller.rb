@@ -27,7 +27,7 @@ class Api::V1::PicturesController < Api::V1::BaseController
         date_time = params[:picture_date_time] || params[:sensor_date_time]
         @picture.date_time = date_time || DateTime.now
         unless @picture.save
-          render json: { message: "Error: #{@picture.errors.full_messages.to_sentence}" }, status: :unprocessable_entity
+          render json: { message: "Error: #{@picture.errors.full_messages.to_sentence}" }, status: :unprocessable_content
         end
       else
         render json: { message: "Error: sensor not found" }, status: :bad_request
@@ -41,7 +41,7 @@ class Api::V1::PicturesController < Api::V1::BaseController
     uploader = Api::V1::PictureUploader.new(current_device)
     uploader.store!(params.require(:file))
   rescue CarrierWave::IntegrityError => e
-    render json: { message: "Error: #{e.message}" }, status: :unprocessable_entity
+    render json: { message: "Error: #{e.message}" }, status: :unprocessable_content
   end
 
   def file

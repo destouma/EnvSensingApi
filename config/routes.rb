@@ -2,7 +2,9 @@ Rails.application.routes.draw do
   mount RailsAdmin::Engine => '/admin', as: 'rails_admin'
   mount Rswag::Ui::Engine => '/api-docs'
   mount Rswag::Api::Engine => '/api-docs'
-  # For details on the DSL available within this file, see http://guides.rubyonrails.org/routing.html
+  # Health check for load balancers and uptime monitors: 200 if the app boots, 500 otherwise.
+  get "up" => "rails/health#show", as: :rails_health_check
+
   namespace :api, constraints: { format: 'json' }, defaults: { format: 'json' } do
     namespace :v1 do
 

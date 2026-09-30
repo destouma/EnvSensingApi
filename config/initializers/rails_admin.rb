@@ -1,4 +1,5 @@
 RailsAdmin.config do |config|
+  config.asset_source = :sprockets
 
   ## == HTTP Basic auth ==
   # Credentials come from ADMIN_USERNAME / ADMIN_PASSWORD. If they are not set, access is
