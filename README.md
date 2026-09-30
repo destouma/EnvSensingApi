@@ -97,6 +97,8 @@ $ bin/bundler-audit     # gems with known vulnerabilities
 ```
 CI also builds both Docker images. After changing the API, regenerate the docs from the specs:
 `RAILS_ENV=test bin/rails rswag:specs:swaggerize`.
+Migrations do not rewrite the schema comments in the models; refresh them when needed with
+`bundle exec annotaterb models`.
 
 Without a local Ruby 4.0, run the checks in the test image (needs a Postgres reachable through `DATABASE_URL`):
 ```shell script
