@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_160200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -38,8 +38,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_140000) do
   end
 
   create_table "devices", force: :cascade do |t|
-    t.string "uuid"
-    t.string "name"
+    t.string "uuid", null: false
+    t.string "name", null: false
     t.text "description"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
@@ -48,38 +48,39 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_140000) do
 
   create_table "pictures", force: :cascade do |t|
     t.bigint "sensor_id", null: false
-    t.string "file_name"
+    t.string "file_name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.datetime "date_time", precision: nil
-    t.index ["sensor_id"], name: "index_pictures_on_sensor_id"
+    t.datetime "date_time", precision: nil, null: false
+    t.index ["sensor_id", "date_time", "id"], name: "index_pictures_on_sensor_id_and_date_time_and_id"
   end
 
   create_table "sensor_readings", force: :cascade do |t|
-    t.integer "sensorvalue"
+    t.bigint "value", null: false
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
-    t.bigint "sensor_id"
-    t.datetime "date_time", precision: nil
-    t.index ["sensor_id"], name: "index_sensor_readings_on_sensor_id"
+    t.bigint "sensor_id", null: false
+    t.datetime "date_time", precision: nil, null: false
+    t.index ["sensor_id", "date_time", "id"], name: "index_sensor_readings_on_sensor_id_and_date_time_and_id"
   end
 
   create_table "sensor_types", force: :cascade do |t|
-    t.string "name"
-    t.string "unit"
-    t.integer "pow10multi"
+    t.string "name", null: false
+    t.string "unit", null: false
+    t.integer "pow10multi", null: false
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["name"], name: "index_sensor_types_on_name", unique: true
   end
 
   create_table "sensors", force: :cascade do |t|
-    t.string "uuid"
-    t.string "name"
+    t.string "uuid", null: false
+    t.string "name", null: false
     t.text "description"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
-    t.bigint "device_id"
-    t.bigint "sensor_type_id"
+    t.bigint "device_id", null: false
+    t.bigint "sensor_type_id", null: false
     t.index ["device_id"], name: "index_sensors_on_device_id"
     t.index ["sensor_type_id"], name: "index_sensors_on_sensor_type_id"
     t.index ["uuid"], name: "index_sensors_on_uuid", unique: true

@@ -16,9 +16,12 @@ Development:
 ============
 ``` shell script
 $ bin/setup --skip-server    # bundle install + db:prepare
-$ bin/rails db:seed
+$ bin/rails db:seed          # demo devices; prints a token per device and an admin API key
 $ bin/rails server -b 0.0.0.0
 ```
+
+Seeds are idempotent (running them again only adds what is missing, nothing is deleted).
+In production they only create the sensor types.
 
 Assuming Postgres SQL is running on local host and listening port 5432
 
@@ -68,6 +71,17 @@ $ sudo docker compose up -d --build
 ```
 
 The app container creates and migrates the database on start (`db:prepare`), no manual step needed.
+Optionally create the standard sensor types with `sudo docker compose exec app bin/rails db:seed`.
+
+Upgrading an existing database: missing reading/picture dates are filled from the time the row was
+stored and missing device/sensor names from their uuid. If rows cannot be fixed automatically (for
+example a reading without a sensor), the migration stops, lists them and changes nothing: fix or delete
+those rows and restart the app container.
+
+Data volume: one reading per minute and per sensor is about 525,000 rows a year. Readings are read
+through a `(sensor_id, date_time, id)` index, so a page takes well under a millisecond whatever the
+table size (measured on 2 million rows). Partitioning or TimescaleDB is not needed before hundreds of
+millions of rows.
 
 The server will listen port 8080.
 

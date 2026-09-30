@@ -3,15 +3,15 @@
 # Table name: pictures
 #
 #  id         :bigint           not null, primary key
-#  date_time  :datetime
-#  file_name  :string
+#  date_time  :datetime         not null
+#  file_name  :string           not null
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
 #  sensor_id  :bigint           not null
 #
 # Indexes
 #
-#  index_pictures_on_sensor_id  (sensor_id)
+#  index_pictures_on_sensor_id_and_date_time_and_id  (sensor_id,date_time,id)
 #
 # Foreign Keys
 #

@@ -45,9 +45,10 @@ RSpec.describe 'Model validations' do
   describe SensorReading do
     let(:sensor) { Sensor.create!(uuid: 's-1', name: 'Temp', device: device, sensor_type: sensor_type) }
 
-    it 'exposes sensorvalue as value' do
-      reading = SensorReading.create!(sensor: sensor, value: 2150)
-      expect(reading.sensorvalue).to eq(2150)
+    it 'stores 64-bit integer values' do
+      reading = SensorReading.create!(sensor: sensor, value: 2**40)
+      expect(reading.reload.value).to eq(2**40)
+      expect(SensorReading.new(sensor: sensor, value: 2**63)).not_to be_valid
     end
 
     it 'accepts a clock skew of up to 5 minutes' do

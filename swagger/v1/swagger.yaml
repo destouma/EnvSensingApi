@@ -49,14 +49,14 @@ paths:
                 - uuid: 123-123-000-000
                   name: MKR1010 BME280
                   description: Living room
-                  created_at: '2026-09-30T18:00:57.442Z'
+                  created_at: '2026-09-30T18:11:20.842Z'
                   sensors:
                   - uuid: 123-123-000-001
                     name: Temperature Sensor
                     description:
                     device_uuid: 123-123-000-000
                     sensor_type:
-                      id: 568
+                      id: 144
                       name: Temperature
                       unit: C
                       pow10multi: -2
@@ -106,9 +106,9 @@ paths:
                 uuid: 123-123-000-010
                 name: ESP32 CAM
                 description: Garden camera
-                created_at: '2026-09-30T18:00:57.859Z'
+                created_at: '2026-09-30T18:11:21.329Z'
                 sensors: []
-                api_token: esd_DAfDLXOcGKxLYC9pRvwP8JtxL_jNDjNpphw8HZiCaLo
+                api_token: esd_DwOa8Jahqd6Efk1b-EFb_QFjDK3t_IVgpAtjhiMujTM
               schema:
                 "$ref": "#/components/schemas/device_with_token"
         '422':
@@ -174,14 +174,14 @@ paths:
                 uuid: 123-123-000-000
                 name: MKR1010 BME280
                 description: Living room
-                created_at: '2026-09-30T18:00:57.960Z'
+                created_at: '2026-09-30T18:11:21.445Z'
                 sensors:
                 - uuid: 123-123-000-001
                   name: Temperature Sensor
                   description:
                   device_uuid: 123-123-000-000
                   sensor_type:
-                    id: 574
+                    id: 150
                     name: Temperature
                     unit: C
                     pow10multi: -2
@@ -247,16 +247,16 @@ paths:
                   description:
                   device_uuid: 123-123-000-001
                   sensor_type:
-                    id: 576
+                    id: 152
                     name: Camera
                     unit: jpg
                     pow10multi: 0
                 pictures:
-                - id: 49
+                - id: 13
                   date_time: '2026-09-30T12:00:00.000Z'
                   sensor_uuid: 123-123-000-005
                   size: 28
-                  url: "/api/v1/pictures/49/file"
+                  url: "/api/v1/pictures/13/file"
                 next_cursor:
               schema:
                 type: object
@@ -289,11 +289,11 @@ paths:
           content:
             application/json:
               example:
-                id: 50
+                id: 14
                 date_time: '2026-09-30T12:00:00.000Z'
                 sensor_uuid: 123-123-000-005
                 size: 28
-                url: "/api/v1/pictures/50/file"
+                url: "/api/v1/pictures/14/file"
               schema:
                 "$ref": "#/components/schemas/picture"
         '422':
@@ -411,18 +411,18 @@ paths:
                   description:
                   device_uuid: 123-123-000-000
                   sensor_type:
-                    id: 581
+                    id: 157
                     name: Temperature
                     unit: C
                     pow10multi: -2
                 readings:
-                - id: 142
+                - id: 38
                   value: 2102
                   date_time: '2026-09-30T12:02:00.000Z'
-                - id: 141
+                - id: 37
                   value: 2101
                   date_time: '2026-09-30T12:01:00.000Z'
-                next_cursor: MjAyNi0wOS0zMFQxMjowMTowMC4wMDAwMDBafDE0MQ
+                next_cursor: MjAyNi0wOS0zMFQxMjowMTowMC4wMDAwMDBafDM3
               schema:
                 type: object
                 properties:
@@ -474,7 +474,7 @@ paths:
           content:
             application/json:
               example:
-                id: 149
+                id: 45
                 value: 2150
                 date_time: '2026-09-30T12:00:00.000Z'
                 sensor_uuid: 123-123-000-001
@@ -539,11 +539,11 @@ paths:
             application/json:
               example:
                 readings:
-                - id: 150
+                - id: 46
                   value: 2150
                   date_time: '2026-09-30T12:00:00.000Z'
                   sensor_uuid: 123-123-000-001
-                - id: 151
+                - id: 47
                   value: 4520
                   date_time: '2026-09-30T12:00:00.000Z'
                   sensor_uuid: 123-123-000-003
@@ -631,7 +631,7 @@ paths:
                   description:
                   device_uuid: 123-123-000-000
                   sensor_type:
-                    id: 590
+                    id: 166
                     name: Temperature
                     unit: C
                     pow10multi: -2
@@ -672,7 +672,7 @@ paths:
                 description:
                 device_uuid: 123-123-000-000
                 sensor_type:
-                  id: 592
+                  id: 168
                   name: Temperature
                   unit: C
                   pow10multi: -2
@@ -734,7 +734,7 @@ paths:
                 description:
                 device_uuid: 123-123-000-000
                 sensor_type:
-                  id: 594
+                  id: 170
                   name: Temperature
                   unit: C
                   pow10multi: -2
@@ -752,7 +752,7 @@ paths:
             application/json:
               example:
                 sensor_types:
-                - id: 595
+                - id: 171
                   name: Temperature
                   unit: C
                   pow10multi: -2
@@ -779,8 +779,8 @@ paths:
           content:
             application/json:
               example:
-                current_date_time: '2026-09-30T18:00:59.314Z'
-                epoch: 1790791259
+                current_date_time: '2026-09-30T18:11:22.561Z'
+                epoch: 1790791882
               schema:
                 type: object
                 properties:
@@ -949,7 +949,8 @@ components:
           type: integer
         value:
           type: integer
-          description: Raw integer value, see sensor_type.pow10multi
+          format: int64
+          description: 'Raw integer value: real value = value * 10^sensor_type.pow10multi'
           example: 2150
         date_time:
           type: string

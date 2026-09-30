@@ -4,8 +4,8 @@
 #
 #  id          :bigint           not null, primary key
 #  description :text
-#  name        :string
-#  uuid        :string
+#  name        :string           not null
+#  uuid        :string           not null
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
 #

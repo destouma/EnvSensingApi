@@ -119,7 +119,7 @@ RSpec.configure do |config|
             type: :object,
             properties: {
               id: { type: :integer },
-              value: { type: :integer, description: 'Raw integer value, see sensor_type.pow10multi', example: 2150 },
+              value: { type: :integer, format: :int64, description: 'Raw integer value: real value = value * 10^sensor_type.pow10multi', example: 2150 },
               date_time: date_time,
               sensor_uuid: public_uuid
             },

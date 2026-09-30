@@ -76,7 +76,7 @@ RSpec.describe 'Readings API', type: :request do
     it 'rejects decimals, out of range values and implausible dates' do
       [
         [{ value: 21.5 }, 'value'],
-        [{ value: 2**31 }, 'value'],
+        [{ value: 2**63 }, 'value'],
         [{}, 'value'],
         [{ value: 1, date_time: 'not a date' }, 'date_time'],
         [{ value: 1, date_time: '1970-01-01T00:00:00Z' }, 'date_time'],
