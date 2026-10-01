@@ -1,7 +1,9 @@
 default: &default
   adapter: postgresql
   encoding: unicode
-  pool: 10
+  # For details on connection pooling, see Rails configuration guide
+  # https://guides.rubyonrails.org/configuring.html#database-pooling
+  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
 
 development:
   <<: *default
@@ -22,6 +24,7 @@ test:
 production:
   <<: *default
   database: envsensing_production
-  username: postgres
-  password: postgres
-  host: db
+  # Non-superuser role created by docker/db/init-app-role.sh; password from .env
+  username: <%= ENV.fetch("DATABASE_USERNAME", "envsensing") %>
+  password: <%= ENV["DATABASE_PASSWORD"] %>
+  host: <%= ENV.fetch("DATABASE_HOST", "db") %>

@@ -1,51 +1,32 @@
 Rails.application.routes.draw do
-  mount RailsAdmin::Engine => '/admin', as: 'rails_admin'
-  mount Rswag::Ui::Engine => '/api-docs'
-  mount Rswag::Api::Engine => '/api-docs'
-  # For details on the DSL available within this file, see http://guides.rubyonrails.org/routing.html
-  namespace :api, constraints: { format: 'json' }, defaults: { format: 'json' } do
+  mount RailsAdmin::Engine => "/admin", as: "rails_admin"
+  mount Rswag::Ui::Engine => "/api-docs"
+  mount Rswag::Api::Engine => "/api-docs"
+
+  # Health check for load balancers and uptime monitors: 200 if the app boots, 500 otherwise.
+  get "up" => "rails/health#show", as: :rails_health_check
+
+  namespace :api, defaults: { format: :json }, constraints: { format: :json } do
     namespace :v1 do
+      get "time", to: "time#show"
 
-      resources :devices do
-        collection do
-          get :index
-        end
+      resources :sensor_types, only: :index
+
+      resources :devices, param: :uuid, only: [ :index, :show, :create ] do
+        resources :sensors, only: [ :index, :create ]
       end
 
-      resources :sensors do
-        collection do
-          get :index
-        end
+      resources :sensors, param: :uuid, only: :show do
+        resources :readings, only: [ :index, :create ]
+        resources :pictures, only: [ :index, :create ]
       end
 
-      resources :sensor_readings do
-        collection do
-          get :index
-          post :create
-        end
-      end
+      # Batch of readings for several sensors of the authenticated device
+      post "readings", to: "readings#batch", as: :readings_batch
 
-      resources :sensor_types do
-        collection do
-          get :index
-        end
+      resources :pictures, only: [] do
+        get :file, on: :member
       end
-
-      resources :date_time do
-        collection do
-          get :current_date_time
-        end
-      end
-
-      resources :pictures do
-        collection do
-          get :index
-          post :create
-          post :upload
-          get :file
-        end
-      end
-
     end
   end
 end

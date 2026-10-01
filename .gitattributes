@@ -1,0 +1,3 @@
+# Scripts executed inside Linux containers must keep LF line endings, even in Windows checkouts
+bin/* text eol=lf
+*.sh text eol=lf

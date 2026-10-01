@@ -4,12 +4,12 @@
 #
 #  id             :bigint           not null, primary key
 #  description    :text
-#  name           :string
-#  uuid           :string
+#  name           :string           not null
+#  uuid           :string           not null
 #  created_at     :datetime         not null
 #  updated_at     :datetime         not null
-#  device_id      :bigint
-#  sensor_type_id :bigint
+#  device_id      :bigint           not null
+#  sensor_type_id :bigint           not null
 #
 # Indexes
 #

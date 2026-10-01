@@ -4,12 +4,12 @@
 #
 #  id             :bigint           not null, primary key
 #  description    :text
-#  name           :string
-#  uuid           :string
+#  name           :string           not null
+#  uuid           :string           not null
 #  created_at     :datetime         not null
 #  updated_at     :datetime         not null
-#  device_id      :bigint
-#  sensor_type_id :bigint
+#  device_id      :bigint           not null
+#  sensor_type_id :bigint           not null
 #
 # Indexes
 #
@@ -23,8 +23,13 @@
 #  fk_rails_...  (sensor_type_id => sensor_types.id)
 #
 class Sensor < ApplicationRecord
+  include PublicUuid
+
   belongs_to :device
   belongs_to :sensor_type
-  has_many :sensor_readings
-  has_many :pictures
+  has_many :sensor_readings, dependent: :restrict_with_error
+  has_many :pictures, dependent: :restrict_with_error
+
+  validates :name, presence: true, length: { maximum: 255 }
+  validates :description, length: { maximum: 2000 }
 end
